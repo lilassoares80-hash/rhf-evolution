@@ -23,10 +23,22 @@ async function callEvolution(path, method='GET', body=null){
   try{ return JSON.parse(text); }catch(e){ return { raw: text }; }
 }
 
+function extractQR(obj){
+  if(!obj) return null;
+  // Todos os campos possíveis onde o QR pode estar
+  return obj.base64
+    || obj.qrcode?.base64
+    || obj.instance?.qrcode?.base64
+    || obj.hash?.qrcode?.base64
+    || obj.qr
+    || obj.code
+    || (typeof obj.raw === 'string' && obj.raw.startsWith('data:image') ? obj.raw : null);
+}
+
 app.get('/status', async (req,res)=>{
   try{
     const data = await callEvolution('/instance/connectionState/'+INSTANCE_NAME);
-    res.json({ ok:true, state: data.instance?.state||data.state||'unknown', data });
+    res.json({ ok:true, state: data.instance?.state||data.state||'unknown' });
   }catch(e){
     res.json({ ok:false, state:'close', error:e.message });
   }
@@ -36,57 +48,54 @@ app.get('/qr', async (req,res)=>{
   try{
     console.log('[QR] Iniciando...');
 
-    // Deletar instância se existir
-    await callEvolution('/instance/delete/'+INSTANCE_NAME,'DELETE').catch(()=>{});
-    await new Promise(r=>setTimeout(r,3000));
+    // Passo 1: Deletar instância existente
+    const delRes = await callEvolution('/instance/delete/'+INSTANCE_NAME,'DELETE').catch(e=>({error:e.message}));
+    console.log('[QR] Delete:', JSON.stringify(delRes).slice(0,100));
+    await new Promise(r=>setTimeout(r,2000));
 
-    // Criar nova instância com qrcode habilitado
+    // Passo 2: Criar instância nova com qrcode:true
     const createRes = await callEvolution('/instance/create','POST',{
       instanceName: INSTANCE_NAME,
       qrcode: true,
       integration: 'WHATSAPP-BAILEYS'
     });
-    console.log('[QR] Create:', JSON.stringify(createRes).slice(0,400));
+    console.log('[QR] Create keys:', Object.keys(createRes||{}));
+    console.log('[QR] Create full:', JSON.stringify(createRes).slice(0,600));
 
-    // O QR vem direto na criação em versões recentes
-    const qrFromCreate = createRes.qrcode?.base64 
-      || createRes.instance?.qrcode?.base64
-      || createRes.hash?.qrcode?.base64;
-
+    // Verificar se QR veio na criação
+    const qrFromCreate = extractQR(createRes) || extractQR(createRes.instance) || extractQR(createRes.qrcode);
     if(qrFromCreate){
       console.log('[QR] QR encontrado na criação!');
       return res.json({ ok:true, qr: qrFromCreate });
     }
 
-    // Aguardar geração do QR
+    // Passo 3: Aguardar e buscar QR no endpoint específico
     await new Promise(r=>setTimeout(r,3000));
 
-    // Tentar buscar QR pelo endpoint específico
-    const qrRes = await callEvolution('/instance/connect/'+INSTANCE_NAME);
-    console.log('[QR] Connect full response:', JSON.stringify(qrRes).slice(0,500));
+    // Tentar endpoint /instance/qrcode/{name}
+    const qrRes1 = await callEvolution('/instance/qrcode/'+INSTANCE_NAME);
+    console.log('[QR] qrcode endpoint:', JSON.stringify(qrRes1).slice(0,400));
+    const qr1 = extractQR(qrRes1);
+    if(qr1) return res.json({ ok:true, qr: qr1 });
 
-    // Tentar todos os campos possíveis
-    const qr = qrRes.base64 
-      || qrRes.qrcode?.base64
-      || qrRes.code
-      || qrRes.qr
-      || qrRes.instance?.qrcode?.base64
-      || (qrRes.raw?.includes('data:image') ? qrRes.raw : null);
+    // Tentar endpoint /instance/qrcode/{name}?image=true
+    const qrRes2 = await callEvolution('/instance/qrcode/'+INSTANCE_NAME+'?image=true');
+    console.log('[QR] qrcode?image=true:', JSON.stringify(qrRes2).slice(0,400));
+    const qr2 = extractQR(qrRes2);
+    if(qr2) return res.json({ ok:true, qr: qr2 });
 
-    if(qr){
-      return res.json({ ok:true, qr });
-    }
+    // Tentar endpoint /instance/connect/{name}
+    const qrRes3 = await callEvolution('/instance/connect/'+INSTANCE_NAME);
+    console.log('[QR] connect:', JSON.stringify(qrRes3).slice(0,400));
+    const qr3 = extractQR(qrRes3);
+    if(qr3) return res.json({ ok:true, qr: qr3 });
 
-    // Última tentativa: buscar pelo endpoint de QR direto
-    const qrDirect = await callEvolution('/instance/qrcode/'+INSTANCE_NAME+'?image=true');
-    console.log('[QR] Direct QR:', JSON.stringify(qrDirect).slice(0,300));
-    const qr2 = qrDirect.base64 || qrDirect.qrcode?.base64 || qrDirect.qr;
-
-    if(qr2){
-      return res.json({ ok:true, qr: qr2 });
-    }
-
-    res.json({ ok:false, error:'QR não gerado ainda — tente novamente em 5 segundos', debug: qrRes });
+    // Nenhum funcionou — retornar debug completo
+    res.json({ 
+      ok:false, 
+      error:'QR não gerado ainda — tente novamente em 5 segundos',
+      debug: { create: createRes, qrcode: qrRes1 }
+    });
   }catch(e){
     console.error('[QR] Erro:', e.message);
     res.status(500).json({ ok:false, error:e.message });
