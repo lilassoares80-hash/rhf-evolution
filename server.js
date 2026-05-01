@@ -12,109 +12,103 @@ const INSTANCE_NAME     = process.env.INSTANCE_NAME || 'rhf-talentos';
 app.use(express.json());
 app.use(cors({ origin: '*', credentials: false }));
 
-// Cache do QR em memória
-let cachedQR = null;
-let qrExpiry = 0;
+// Estado global
+let qrState = { qr: null, status: 'idle', ts: 0 };
 
 async function callEvolution(path, method='GET', body=null){
-  const opts = {
-    method,
-    headers:{'Content-Type':'application/json','apikey':EVOLUTION_API_KEY}
-  };
+  const opts = { method, headers:{'Content-Type':'application/json','apikey':EVOLUTION_API_KEY} };
   if(body) opts.body = JSON.stringify(body);
   const res = await fetch(EVOLUTION_URL+path, opts);
   const text = await res.text();
   try{ return JSON.parse(text); }catch(e){ return {raw:text}; }
 }
 
-async function fetchQRFromInstance(){
-  // fetchInstances traz os dados completos incluindo QR quando disponível
-  const instances = await callEvolution('/instance/fetchInstances?instanceName='+INSTANCE_NAME);
-  const inst = Array.isArray(instances) ? instances[0] : instances;
-  if(!inst) return null;
-  
-  console.log('[FETCH] Instance keys:', Object.keys(inst||{}));
-  console.log('[FETCH] Instance data:', JSON.stringify(inst).slice(0,500));
-  
-  // Tentar todos os campos
-  return inst.qrcode?.base64 
-    || inst.qr?.base64
-    || inst.hash?.qrcode?.base64
-    || inst.connectionStatus?.qrcode?.base64
-    || null;
+// Gerar QR em background — não bloqueia o request
+async function gerarQRBackground(){
+  try{
+    qrState = { qr:null, status:'generating', ts:Date.now() };
+    console.log('[BG] Deletando instância...');
+    await callEvolution('/instance/delete/'+INSTANCE_NAME,'DELETE').catch(()=>{});
+    await new Promise(r=>setTimeout(r,2000));
+
+    console.log('[BG] Criando instância...');
+    const cr = await callEvolution('/instance/create','POST',{
+      instanceName: INSTANCE_NAME, qrcode:true, integration:'WHATSAPP-BAILEYS'
+    });
+    console.log('[BG] Criada. qrcode field:', JSON.stringify(cr.qrcode));
+
+    // QR na criação?
+    const qr0 = cr.qrcode?.base64||cr.instance?.qrcode?.base64;
+    if(qr0){ qrState={qr:qr0,status:'ready',ts:Date.now()}; console.log('[BG] QR pronto na criação!'); return; }
+
+    // Polling leve — buscar fetchInstances a cada 3s
+    for(let i=0; i<8; i++){
+      await new Promise(r=>setTimeout(r,3000));
+      const instances = await callEvolution('/instance/fetchInstances?instanceName='+INSTANCE_NAME);
+      const inst = Array.isArray(instances)?instances[0]:null;
+      if(inst){
+        const raw = JSON.stringify(inst);
+        // Procurar qualquer string base64 longa (QR code)
+        const m = raw.match(/"base64":"(data:image[^"]+)"/);
+        if(m){ qrState={qr:m[1],status:'ready',ts:Date.now()}; console.log('[BG] QR encontrado poll '+i); return; }
+        // Também verificar sem data:image prefix
+        const m2 = raw.match(/"base64":"([A-Za-z0-9+/=]{500,})"/);
+        if(m2){ qrState={qr:'data:image/png;base64,'+m2[1],status:'ready',ts:Date.now()}; console.log('[BG] QR base64 puro poll '+i); return; }
+        console.log('[BG] Poll '+i+' status:',inst.connectionStatus,'| raw length:',raw.length);
+      }
+    }
+    qrState={qr:null,status:'failed',ts:Date.now()};
+    console.log('[BG] QR não gerado após polling');
+  }catch(e){
+    qrState={qr:null,status:'error',ts:Date.now(),error:e.message};
+    console.error('[BG] Erro:',e.message);
+  }
 }
 
 app.get('/status', async (req,res)=>{
   try{
     const data = await callEvolution('/instance/connectionState/'+INSTANCE_NAME);
     const state = data.instance?.state||data.state||'unknown';
-    if(state==='open'){ cachedQR=null; qrExpiry=0; }
+    if(state==='open'){ qrState={qr:null,status:'connected',ts:Date.now()}; }
     res.json({ok:true, state});
   }catch(e){ res.json({ok:false, state:'close', error:e.message}); }
 });
 
-app.get('/qr', async (req,res)=>{
-  try{
-    // Retornar cache se válido
-    if(cachedQR && Date.now()<qrExpiry){
-      return res.json({ok:true, qr:cachedQR});
-    }
-
-    console.log('[QR] v10 - Deletando instância...');
-    await callEvolution('/instance/delete/'+INSTANCE_NAME,'DELETE').catch(()=>{});
-    await new Promise(r=>setTimeout(r,2000));
-
-    console.log('[QR] Criando instância...');
-    const cr = await callEvolution('/instance/create','POST',{
-      instanceName: INSTANCE_NAME,
-      qrcode: true,
-      integration: 'WHATSAPP-BAILEYS'
-    });
-    
-    // QR na resposta da criação?
-    const qrCreate = cr.qrcode?.base64||cr.instance?.qrcode?.base64;
-    if(qrCreate){
-      cachedQR=qrCreate; qrExpiry=Date.now()+55000;
-      return res.json({ok:true, qr:qrCreate});
-    }
-
-    // Polling: buscar via fetchInstances a cada 2s por até 20s
-    console.log('[QR] Iniciando polling de 20s...');
-    for(let i=0; i<10; i++){
-      await new Promise(r=>setTimeout(r,2000));
-      
-      // Buscar instância completa
-      const instances = await callEvolution('/instance/fetchInstances?instanceName='+INSTANCE_NAME);
-      const inst = Array.isArray(instances) ? instances[0] : null;
-      
-      if(inst){
-        const allData = JSON.stringify(inst);
-        console.log('[POLL '+i+'] connectionStatus:', inst.connectionStatus, '| has base64:', allData.includes('base64'));
-        
-        // Procurar base64 em qualquer lugar da resposta
-        const match = allData.match(/"base64":"([^"]{100,})"/);
-        if(match){
-          const qr = match[1];
-          console.log('[POLL] QR encontrado!');
-          cachedQR=qr; qrExpiry=Date.now()+55000;
-          return res.json({ok:true, qr});
-        }
-      }
-      
-      // Também tentar connect
-      const conn = await callEvolution('/instance/connect/'+INSTANCE_NAME);
-      const qrConn = conn.base64||conn.code;
-      if(qrConn && qrConn.length>100){
-        cachedQR=qrConn; qrExpiry=Date.now()+55000;
-        return res.json({ok:true, qr:qrConn});
-      }
-    }
-
-    res.json({ok:false, error:'QR não gerado em 20s — tente novamente'});
-  }catch(e){
-    console.error('[QR]',e.message);
-    res.status(500).json({ok:false,error:e.message});
+// POST /qr/start — inicia geração em background, retorna imediatamente
+app.get('/qr/start', (req,res)=>{
+  if(qrState.status==='generating' && Date.now()-qrState.ts<30000){
+    return res.json({ok:true, status:'generating', message:'Já gerando...'});
   }
+  gerarQRBackground(); // não await — background!
+  res.json({ok:true, status:'generating', message:'Geração iniciada — chame /qr/status em 5 segundos'});
+});
+
+// GET /qr/status — verifica se QR está pronto
+app.get('/qr/status', (req,res)=>{
+  if(qrState.status==='ready' && qrState.qr && Date.now()-qrState.ts<55000){
+    return res.json({ok:true, status:'ready', qr:qrState.qr});
+  }
+  res.json({ok:false, status:qrState.status, age:Math.round((Date.now()-qrState.ts)/1000)+'s'});
+});
+
+// GET /qr — compatibilidade com CRM atual (tenta retornar QR se disponível)
+app.get('/qr', async (req,res)=>{
+  // Se tem QR pronto
+  if(qrState.status==='ready' && qrState.qr && Date.now()-qrState.ts<55000){
+    return res.json({ok:true, qr:qrState.qr});
+  }
+  // Iniciar geração em background
+  if(qrState.status!=='generating'){
+    gerarQRBackground();
+  }
+  // Aguardar apenas 8s (dentro do timeout do Railway)
+  for(let i=0;i<4;i++){
+    await new Promise(r=>setTimeout(r,2000));
+    if(qrState.status==='ready' && qrState.qr){
+      return res.json({ok:true, qr:qrState.qr});
+    }
+  }
+  res.json({ok:false, error:'QR sendo gerado — clique novamente em 5 segundos', status:qrState.status});
 });
 
 app.post('/send', async (req,res)=>{
@@ -138,7 +132,7 @@ app.post('/send-bulk', async (req,res)=>{
       try{
         const num=m.phone.replace(/\D/g,'');
         const data=await callEvolution('/message/sendText/'+INSTANCE_NAME,'POST',{
-          number:num.startsWith('55')?num:'55'+num,text:m.message
+          number:num.startsWith('55')?num:'55'+num, text:m.message
         });
         results.push({phone:m.phone,ok:true,data});
         await new Promise(r=>setTimeout(r,1500));
@@ -151,22 +145,16 @@ app.post('/send-bulk', async (req,res)=>{
 app.post('/disconnect', async (req,res)=>{
   try{
     await callEvolution('/instance/delete/'+INSTANCE_NAME,'DELETE');
-    cachedQR=null; qrExpiry=0;
+    qrState={qr:null,status:'idle',ts:0};
     res.json({ok:true});
   }catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 
 app.get('/debug', async (req,res)=>{
   const state=await callEvolution('/instance/connectionState/'+INSTANCE_NAME).catch(e=>({error:e.message}));
-  const instances=await callEvolution('/instance/fetchInstances?instanceName='+INSTANCE_NAME).catch(e=>({error:e.message}));
-  const inst=Array.isArray(instances)?instances[0]:instances;
-  res.json({
-    evolutionUrl:EVOLUTION_URL, instanceName:INSTANCE_NAME,
-    state, instanceKeys:inst?Object.keys(inst):[],
-    instanceFull:inst, cachedQR:cachedQR?'presente':'nenhum'
-  });
+  res.json({evolutionUrl:EVOLUTION_URL,instanceName:INSTANCE_NAME,state,qrState:{...qrState,qr:qrState.qr?'presente':'nenhum'}});
 });
 
-app.get('/health', (req,res)=>res.json({ok:true,service:'RHF Evolution Proxy v10',ts:Date.now()}));
+app.get('/health', (req,res)=>res.json({ok:true,service:'RHF Evolution Proxy v11',ts:Date.now()}));
 
-app.listen(PORT,()=>console.log('RHF Evolution Proxy v10 porta '+PORT));
+app.listen(PORT,()=>console.log('RHF Evolution Proxy v11 porta '+PORT));
