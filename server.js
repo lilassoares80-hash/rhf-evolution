@@ -12,7 +12,7 @@ const INSTANCE_NAME      = process.env.INSTANCE_NAME || 'rhf-talentos';
 const ALLOWED_ORIGIN     = process.env.ALLOWED_ORIGIN || 'https://integravagass.netlify.app';
 
 app.use(express.json());
-app.use(cors({ origin: [ALLOWED_ORIGIN, 'http://localhost:3000'], credentials: true }));
+app.use(cors({ origin: '*', credentials: false })); // Aceita qualquer origem
 
 // ── Helper: chamada à Evolution API ──
 async function callEvolution(path, method='GET', body=null){
@@ -29,26 +29,39 @@ async function callEvolution(path, method='GET', body=null){
 app.get('/status', async (req,res)=>{
   try{
     const data = await callEvolution('/instance/connectionState/'+INSTANCE_NAME);
-    res.json({ ok:true, state: data.instance?.state||'unknown', data });
+    res.json({ ok:true, state: data.instance?.state||data.state||'unknown', data });
   }catch(e){
-    res.status(500).json({ ok:false, error:e.message });
+    console.error('[STATUS] Error:', e.message);
+    // Tentar retornar algo útil
+    res.json({ ok:false, state:'close', error:e.message });
   }
 });
 
 // ── GET /qr — obter QR code para conectar ──
 app.get('/qr', async (req,res)=>{
   try{
-    // Criar instância se não existir
-    await callEvolution('/instance/create','POST',{
+    console.log('[QR] Iniciando... Evolution URL:', EVOLUTION_URL);
+    // Criar instância (ignorar erro se já existe)
+    const createRes = await callEvolution('/instance/create','POST',{
       instanceName: INSTANCE_NAME,
       qrcode: true,
       integration: 'WHATSAPP-BAILEYS'
-    }).catch(()=>{});
+    }).catch(e=>({ error: e.message }));
+    console.log('[QR] Create result:', JSON.stringify(createRes).slice(0,200));
+    
     // Pegar QR
     const data = await callEvolution('/instance/connect/'+INSTANCE_NAME);
-    res.json({ ok:true, qr: data.base64||data.qrcode?.base64, data });
+    console.log('[QR] Connect result keys:', Object.keys(data||{}));
+    
+    const qrCode = data.base64 || data.qrcode?.base64 || data.code || data.qr;
+    if(!qrCode){
+      console.log('[QR] No QR found in:', JSON.stringify(data).slice(0,300));
+      return res.json({ ok:false, error:'QR não gerado — tente novamente em 5 segundos', data });
+    }
+    res.json({ ok:true, qr: qrCode });
   }catch(e){
-    res.status(500).json({ ok:false, error:e.message });
+    console.error('[QR] Error:', e.message);
+    res.status(500).json({ ok:false, error:e.message, evolutionUrl: EVOLUTION_URL });
   }
 });
 
