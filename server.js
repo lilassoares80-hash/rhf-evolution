@@ -23,18 +23,6 @@ async function callEvolution(path, method='GET', body=null){
   try{ return JSON.parse(text); }catch(e){ return { raw: text }; }
 }
 
-function extractQR(obj){
-  if(!obj) return null;
-  // Todos os campos possíveis onde o QR pode estar
-  return obj.base64
-    || obj.qrcode?.base64
-    || obj.instance?.qrcode?.base64
-    || obj.hash?.qrcode?.base64
-    || obj.qr
-    || obj.code
-    || (typeof obj.raw === 'string' && obj.raw.startsWith('data:image') ? obj.raw : null);
-}
-
 app.get('/status', async (req,res)=>{
   try{
     const data = await callEvolution('/instance/connectionState/'+INSTANCE_NAME);
@@ -48,56 +36,58 @@ app.get('/qr', async (req,res)=>{
   try{
     console.log('[QR] Iniciando...');
 
-    // Passo 1: Deletar instância existente
-    const delRes = await callEvolution('/instance/delete/'+INSTANCE_NAME,'DELETE').catch(e=>({error:e.message}));
-    console.log('[QR] Delete:', JSON.stringify(delRes).slice(0,100));
+    // Deletar instância existente
+    await callEvolution('/instance/delete/'+INSTANCE_NAME,'DELETE').catch(()=>{});
     await new Promise(r=>setTimeout(r,2000));
 
-    // Passo 2: Criar instância nova com qrcode:true
+    // Criar nova instância
     const createRes = await callEvolution('/instance/create','POST',{
       instanceName: INSTANCE_NAME,
       qrcode: true,
       integration: 'WHATSAPP-BAILEYS'
     });
-    console.log('[QR] Create keys:', Object.keys(createRes||{}));
-    console.log('[QR] Create full:', JSON.stringify(createRes).slice(0,600));
+    console.log('[QR] Instância criada, status:', createRes.instance?.status);
 
-    // Verificar se QR veio na criação
-    const qrFromCreate = extractQR(createRes) || extractQR(createRes.instance) || extractQR(createRes.qrcode);
-    if(qrFromCreate){
-      console.log('[QR] QR encontrado na criação!');
-      return res.json({ ok:true, qr: qrFromCreate });
+    // Aguardar geração do QR (a Evolution API precisa de tempo)
+    await new Promise(r=>setTimeout(r,4000));
+
+    // Chamar /connect para obter o QR
+    // Tentar até 3 vezes com intervalo
+    let qr = null;
+    for(let i=0; i<3; i++){
+      const connectRes = await callEvolution('/instance/connect/'+INSTANCE_NAME);
+      console.log('[QR] Connect tentativa '+(i+1)+':', JSON.stringify(connectRes).slice(0,300));
+      
+      qr = connectRes.base64 
+        || connectRes.qrcode?.base64
+        || connectRes.code
+        || connectRes.qr
+        || connectRes.instance?.qrcode?.base64;
+      
+      if(qr) break;
+      if(i<2) await new Promise(r=>setTimeout(r,3000));
     }
 
-    // Passo 3: Aguardar e buscar QR no endpoint específico
-    await new Promise(r=>setTimeout(r,3000));
+    if(qr){
+      console.log('[QR] QR gerado com sucesso!');
+      return res.json({ ok:true, qr });
+    }
 
-    // Tentar endpoint /instance/qrcode/{name}
-    const qrRes1 = await callEvolution('/instance/qrcode/'+INSTANCE_NAME);
-    console.log('[QR] qrcode endpoint:', JSON.stringify(qrRes1).slice(0,400));
-    const qr1 = extractQR(qrRes1);
-    if(qr1) return res.json({ ok:true, qr: qr1 });
-
-    // Tentar endpoint /instance/qrcode/{name}?image=true
-    const qrRes2 = await callEvolution('/instance/qrcode/'+INSTANCE_NAME+'?image=true');
-    console.log('[QR] qrcode?image=true:', JSON.stringify(qrRes2).slice(0,400));
-    const qr2 = extractQR(qrRes2);
-    if(qr2) return res.json({ ok:true, qr: qr2 });
-
-    // Tentar endpoint /instance/connect/{name}
-    const qrRes3 = await callEvolution('/instance/connect/'+INSTANCE_NAME);
-    console.log('[QR] connect:', JSON.stringify(qrRes3).slice(0,400));
-    const qr3 = extractQR(qrRes3);
-    if(qr3) return res.json({ ok:true, qr: qr3 });
-
-    // Nenhum funcionou — retornar debug completo
-    res.json({ 
-      ok:false, 
-      error:'QR não gerado ainda — tente novamente em 5 segundos',
-      debug: { create: createRes, qrcode: qrRes1 }
-    });
+    res.json({ ok:false, error:'QR não gerado ainda — clique em Gerar QR Code novamente' });
   }catch(e){
     console.error('[QR] Erro:', e.message);
+    res.status(500).json({ ok:false, error:e.message });
+  }
+});
+
+// Novo endpoint: só pega o QR sem recriar a instância
+app.get('/qr/fetch', async (req,res)=>{
+  try{
+    const connectRes = await callEvolution('/instance/connect/'+INSTANCE_NAME);
+    const qr = connectRes.base64 || connectRes.qrcode?.base64 || connectRes.code || connectRes.qr;
+    if(qr) return res.json({ ok:true, qr });
+    res.json({ ok:false, error:'QR ainda não disponível', data:connectRes });
+  }catch(e){
     res.status(500).json({ ok:false, error:e.message });
   }
 });
