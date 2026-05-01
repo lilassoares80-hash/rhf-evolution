@@ -8,11 +8,11 @@ const PORT = process.env.PORT || 3000;
 const EVOLUTION_URL     = process.env.EVOLUTION_URL || 'http://localhost:8080';
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || 'rhf-key-2024';
 const INSTANCE_NAME     = process.env.INSTANCE_NAME || 'rhf-talentos';
+const WEBHOOK_URL       = process.env.WEBHOOK_URL || '';
 
 app.use(express.json());
 app.use(cors({ origin: '*', credentials: false }));
 
-// Armazenar QR em memória quando chegar via webhook
 let cachedQR = null;
 let qrTimestamp = 0;
 
@@ -27,17 +27,18 @@ async function callEvolution(path, method='GET', body=null){
   try{ return JSON.parse(text); }catch(e){ return { raw: text }; }
 }
 
-// Webhook da Evolution API envia o QR aqui
+// Webhook recebe QR da Evolution API
 app.post('/webhook', (req,res)=>{
   const body = req.body;
-  console.log('[WEBHOOK] Evento:', body.event, '| Keys:', Object.keys(body));
-  if(body.event === 'qrcode.updated'){
-    const qr = body.data?.qrcode?.base64 || body.data?.base64 || body.qrcode?.base64;
-    if(qr){
-      cachedQR = qr;
-      qrTimestamp = Date.now();
-      console.log('[WEBHOOK] QR recebido e armazenado!');
-    }
+  console.log('[WEBHOOK] evento:', body.event);
+  const qr = body.data?.qrcode?.base64 
+    || body.data?.base64 
+    || body.qrcode?.base64
+    || body.base64;
+  if(qr){
+    cachedQR = qr;
+    qrTimestamp = Date.now();
+    console.log('[WEBHOOK] QR armazenado!');
   }
   res.json({ ok:true });
 });
@@ -46,89 +47,82 @@ app.get('/status', async (req,res)=>{
   try{
     const data = await callEvolution('/instance/connectionState/'+INSTANCE_NAME);
     const state = data.instance?.state||data.state||'unknown';
-    if(state === 'open') cachedQR = null; // Limpar QR se conectado
+    if(state==='open') cachedQR=null;
     res.json({ ok:true, state });
-  }catch(e){
-    res.json({ ok:false, state:'close', error:e.message });
-  }
+  }catch(e){ res.json({ ok:false, state:'close', error:e.message }); }
 });
 
 app.get('/qr', async (req,res)=>{
   try{
-    console.log('[QR] Iniciando...');
-
-    // Verificar se já tem QR em cache (menos de 60s)
-    if(cachedQR && Date.now()-qrTimestamp < 60000){
-      console.log('[QR] Retornando QR do cache!');
+    // Retornar QR do cache se válido
+    if(cachedQR && Date.now()-qrTimestamp < 55000){
       return res.json({ ok:true, qr: cachedQR });
     }
 
-    // Deletar e recriar instância com webhook apontando para cá
+    // Deletar instância antiga
     await callEvolution('/instance/delete/'+INSTANCE_NAME,'DELETE').catch(()=>{});
     await new Promise(r=>setTimeout(r,2000));
 
-    const webhookUrl = process.env.WEBHOOK_URL || '';
-    const createBody = {
+    // Criar com webhook configurado
+    const createRes = await callEvolution('/instance/create','POST',{
       instanceName: INSTANCE_NAME,
       qrcode: true,
-      integration: 'WHATSAPP-BAILEYS'
-    };
-
-    // Adicionar webhook se URL configurada
-    if(webhookUrl){
-      createBody.webhook = {
-        url: webhookUrl+'/webhook',
+      integration: 'WHATSAPP-BAILEYS',
+      webhook: WEBHOOK_URL ? {
+        url: WEBHOOK_URL+'/webhook',
         byEvents: true,
         base64: true,
-        events: ['QRCODE_UPDATED','CONNECTION_UPDATE','MESSAGES_UPSERT']
-      };
+        events: ['QRCODE_UPDATED','CONNECTION_UPDATE']
+      } : undefined
+    });
+    console.log('[QR] Instância criada');
+
+    // QR na criação?
+    const qrC = createRes.qrcode?.base64||createRes.instance?.qrcode?.base64;
+    if(qrC){ cachedQR=qrC; qrTimestamp=Date.now(); return res.json({ ok:true, qr:qrC }); }
+
+    // Configurar webhook separadamente se não veio na criação
+    if(WEBHOOK_URL){
+      await callEvolution('/webhook/set/'+INSTANCE_NAME,'POST',{
+        url: WEBHOOK_URL+'/webhook',
+        byEvents: true,
+        base64: true,
+        enabled: true,
+        events: ['QRCODE_UPDATED','CONNECTION_UPDATE']
+      }).catch(e=>console.log('[WEBHOOK SET]',e.message));
     }
 
-    const createRes = await callEvolution('/instance/create','POST', createBody);
-    console.log('[QR] Create status:', createRes.instance?.status);
-    
-    // QR pode vir direto na criação
-    const qrCreate = createRes.qrcode?.base64 || createRes.instance?.qrcode?.base64;
-    if(qrCreate){
-      cachedQR = qrCreate;
-      qrTimestamp = Date.now();
-      return res.json({ ok:true, qr: qrCreate });
-    }
-
-    // Aguardar e tentar connect
-    await new Promise(r=>setTimeout(r,5000));
-    
+    // Chamar connect para gerar QR
+    await new Promise(r=>setTimeout(r,2000));
     const connectRes = await callEvolution('/instance/connect/'+INSTANCE_NAME);
-    console.log('[QR] Connect full:', JSON.stringify(connectRes).slice(0,400));
-    
-    const qrConnect = connectRes.base64 || connectRes.qrcode?.base64 || connectRes.code;
-    if(qrConnect){
-      cachedQR = qrConnect;
-      qrTimestamp = Date.now();
-      return res.json({ ok:true, qr: qrConnect });
-    }
+    console.log('[QR] Connect:', JSON.stringify(connectRes).slice(0,200));
 
-    // Se tem QR no cache do webhook
-    if(cachedQR && Date.now()-qrTimestamp < 60000){
+    const qrConn = connectRes.base64||connectRes.qrcode?.base64||connectRes.code;
+    if(qrConn){ cachedQR=qrConn; qrTimestamp=Date.now(); return res.json({ ok:true, qr:qrConn }); }
+
+    // Aguardar webhook trazer o QR
+    await new Promise(r=>setTimeout(r,5000));
+    if(cachedQR && Date.now()-qrTimestamp < 55000){
       return res.json({ ok:true, qr: cachedQR });
     }
 
     res.json({ ok:false, error:'QR sendo gerado — clique novamente em 5 segundos' });
   }catch(e){
-    console.error('[QR] Erro:', e.message);
+    console.error('[QR]',e.message);
     res.status(500).json({ ok:false, error:e.message });
   }
 });
 
 app.get('/qr/fetch', async (req,res)=>{
-  // Só busca QR sem recriar
-  if(cachedQR && Date.now()-qrTimestamp < 60000){
-    return res.json({ ok:true, qr: cachedQR });
-  }
-  const connectRes = await callEvolution('/instance/connect/'+INSTANCE_NAME).catch(e=>({error:e.message}));
-  const qr = connectRes.base64 || connectRes.qrcode?.base64 || connectRes.code;
+  if(cachedQR && Date.now()-qrTimestamp < 55000) return res.json({ ok:true, qr:cachedQR });
+  // Tentar pegar QR direto
+  const r = await callEvolution('/instance/connect/'+INSTANCE_NAME).catch(e=>({error:e.message}));
+  const qr = r.base64||r.qrcode?.base64||r.code;
   if(qr){ cachedQR=qr; qrTimestamp=Date.now(); return res.json({ ok:true, qr }); }
-  res.json({ ok:false, error:'QR não disponível', data:connectRes });
+  // Aguardar webhook
+  await new Promise(r2=>setTimeout(r2,3000));
+  if(cachedQR && Date.now()-qrTimestamp < 55000) return res.json({ ok:true, qr:cachedQR });
+  res.json({ ok:false, error:'QR não disponível ainda' });
 });
 
 app.post('/send', async (req,res)=>{
@@ -165,23 +159,25 @@ app.post('/send-bulk', async (req,res)=>{
 app.post('/disconnect', async (req,res)=>{
   try{
     await callEvolution('/instance/logout/'+INSTANCE_NAME,'DELETE');
-    cachedQR = null;
+    cachedQR=null;
     res.json({ ok:true });
   }catch(e){ res.status(500).json({ ok:false, error:e.message }); }
 });
 
-// Endpoint de diagnóstico
 app.get('/debug', async (req,res)=>{
   const state = await callEvolution('/instance/connectionState/'+INSTANCE_NAME).catch(e=>({error:e.message}));
   const instances = await callEvolution('/instance/fetchInstances').catch(e=>({error:e.message}));
+  // Verificar webhook configurado
+  const webhook = await callEvolution('/webhook/find/'+INSTANCE_NAME).catch(e=>({error:e.message}));
   res.json({ 
     evolutionUrl: EVOLUTION_URL,
+    webhookUrl: WEBHOOK_URL,
     instanceName: INSTANCE_NAME,
-    state, instances,
+    state, webhook,
     cachedQR: cachedQR ? 'presente ('+Math.round((Date.now()-qrTimestamp)/1000)+'s atrás)' : 'nenhum'
   });
 });
 
-app.get('/health', (req,res)=>res.json({ ok:true, service:'RHF Evolution Proxy v6', ts:Date.now() }));
+app.get('/health', (req,res)=>res.json({ ok:true, service:'RHF Evolution Proxy v7', ts:Date.now() }));
 
-app.listen(PORT, ()=>console.log('RHF Evolution Proxy rodando na porta '+PORT));
+app.listen(PORT, ()=>console.log('RHF Evolution Proxy v7 rodando na porta '+PORT));
