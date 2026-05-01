@@ -19,7 +19,8 @@ async function callEvolution(path, method='GET', body=null){
   };
   if(body) opts.body = JSON.stringify(body);
   const res = await fetch(EVOLUTION_URL+path, opts);
-  return res.json();
+  const text = await res.text();
+  try{ return JSON.parse(text); }catch(e){ return { raw: text }; }
 }
 
 app.get('/status', async (req,res)=>{
@@ -33,45 +34,59 @@ app.get('/status', async (req,res)=>{
 
 app.get('/qr', async (req,res)=>{
   try{
-    console.log('[QR] Iniciando... Evolution URL:', EVOLUTION_URL);
+    console.log('[QR] Iniciando...');
 
-    // Verificar se instância existe e qual o estado
-    const stateRes = await callEvolution('/instance/connectionState/'+INSTANCE_NAME).catch(()=>null);
-    console.log('[QR] Estado atual:', JSON.stringify(stateRes).slice(0,200));
+    // Deletar instância se existir
+    await callEvolution('/instance/delete/'+INSTANCE_NAME,'DELETE').catch(()=>{});
+    await new Promise(r=>setTimeout(r,3000));
 
-    // Se instância existe mas não está conectada, deletar e recriar
-    if(stateRes && !stateRes.error){
-      const state = stateRes.instance?.state||stateRes.state||'';
-      if(state !== 'open'){
-        console.log('[QR] Deletando instância antiga...');
-        await callEvolution('/instance/delete/'+INSTANCE_NAME,'DELETE').catch(()=>{});
-        await new Promise(r=>setTimeout(r,2000));
-      } else {
-        return res.json({ ok:true, state:'open', message:'WhatsApp já conectado!' });
-      }
-    }
-
-    // Criar nova instância
-    console.log('[QR] Criando nova instância...');
+    // Criar nova instância com qrcode habilitado
     const createRes = await callEvolution('/instance/create','POST',{
       instanceName: INSTANCE_NAME,
       qrcode: true,
       integration: 'WHATSAPP-BAILEYS'
     });
-    console.log('[QR] Create:', JSON.stringify(createRes).slice(0,300));
+    console.log('[QR] Create:', JSON.stringify(createRes).slice(0,400));
 
-    await new Promise(r=>setTimeout(r,2000));
+    // O QR vem direto na criação em versões recentes
+    const qrFromCreate = createRes.qrcode?.base64 
+      || createRes.instance?.qrcode?.base64
+      || createRes.hash?.qrcode?.base64;
 
-    // Pegar QR
-    const connectRes = await callEvolution('/instance/connect/'+INSTANCE_NAME);
-    console.log('[QR] Connect keys:', Object.keys(connectRes||{}));
-
-    const qr = connectRes.base64 || connectRes.qrcode?.base64 || connectRes.code || connectRes.qr;
-    if(!qr){
-      console.log('[QR] Resposta completa:', JSON.stringify(connectRes).slice(0,500));
-      return res.json({ ok:false, error:'QR não gerado ainda — aguarde 5 segundos e tente novamente', data:connectRes });
+    if(qrFromCreate){
+      console.log('[QR] QR encontrado na criação!');
+      return res.json({ ok:true, qr: qrFromCreate });
     }
-    res.json({ ok:true, qr });
+
+    // Aguardar geração do QR
+    await new Promise(r=>setTimeout(r,3000));
+
+    // Tentar buscar QR pelo endpoint específico
+    const qrRes = await callEvolution('/instance/connect/'+INSTANCE_NAME);
+    console.log('[QR] Connect full response:', JSON.stringify(qrRes).slice(0,500));
+
+    // Tentar todos os campos possíveis
+    const qr = qrRes.base64 
+      || qrRes.qrcode?.base64
+      || qrRes.code
+      || qrRes.qr
+      || qrRes.instance?.qrcode?.base64
+      || (qrRes.raw?.includes('data:image') ? qrRes.raw : null);
+
+    if(qr){
+      return res.json({ ok:true, qr });
+    }
+
+    // Última tentativa: buscar pelo endpoint de QR direto
+    const qrDirect = await callEvolution('/instance/qrcode/'+INSTANCE_NAME+'?image=true');
+    console.log('[QR] Direct QR:', JSON.stringify(qrDirect).slice(0,300));
+    const qr2 = qrDirect.base64 || qrDirect.qrcode?.base64 || qrDirect.qr;
+
+    if(qr2){
+      return res.json({ ok:true, qr: qr2 });
+    }
+
+    res.json({ ok:false, error:'QR não gerado ainda — tente novamente em 5 segundos', debug: qrRes });
   }catch(e){
     console.error('[QR] Erro:', e.message);
     res.status(500).json({ ok:false, error:e.message });
@@ -85,8 +100,7 @@ app.post('/send', async (req,res)=>{
     const num = phone.replace(/\D/g,'');
     const formatted = num.startsWith('55') ? num : '55'+num;
     const data = await callEvolution('/message/sendText/'+INSTANCE_NAME,'POST',{
-      number: formatted,
-      text: message
+      number: formatted, text: message
     });
     res.json({ ok:true, data });
   }catch(e){
@@ -102,15 +116,12 @@ app.post('/send-bulk', async (req,res)=>{
     for(const m of messages){
       try{
         const num = m.phone.replace(/\D/g,'');
-        const formatted = num.startsWith('55') ? num : '55'+num;
         const data = await callEvolution('/message/sendText/'+INSTANCE_NAME,'POST',{
-          number: formatted, text: m.message
+          number: num.startsWith('55')?num:'55'+num, text: m.message
         });
         results.push({ phone:m.phone, ok:true, data });
         await new Promise(r=>setTimeout(r,1500));
-      }catch(e){
-        results.push({ phone:m.phone, ok:false, error:e.message });
-      }
+      }catch(e){ results.push({ phone:m.phone, ok:false, error:e.message }); }
     }
     res.json({ ok:true, results });
   }catch(e){
