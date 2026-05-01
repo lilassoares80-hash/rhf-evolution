@@ -32,10 +32,11 @@ app.get('/status', async (req,res)=>{
 
 app.get('/qr', async (req,res)=>{
   try{
-    console.log('[QR] Iniciando v8...');
+    console.log('[QR] v9 iniciando...');
 
-    // Deletar instância
+    // Deletar instância existente
     await callEvolution('/instance/delete/'+INSTANCE_NAME,'DELETE').catch(()=>{});
+    console.log('[QR] Deletada. Aguardando...');
     await new Promise(r=>setTimeout(r,3000));
 
     // Criar instância
@@ -44,42 +45,35 @@ app.get('/qr', async (req,res)=>{
       qrcode: true,
       integration: 'WHATSAPP-BAILEYS'
     });
-    console.log('[QR] Criada. Keys:', Object.keys(cr));
+    console.log('[QR] Criada. Status:', cr.instance?.status, '| Keys:', Object.keys(cr));
+    console.log('[QR] Create full:', JSON.stringify(cr).slice(0,600));
 
-    // Verificar se QR veio na criação
-    const qr0 = cr.qrcode?.base64||cr.instance?.qrcode?.base64||cr.base64;
-    if(qr0){ console.log('[QR] QR na criação!'); return res.json({ok:true,qr:qr0}); }
+    // Tentar extrair QR da criação
+    const qr0 = cr.qrcode?.base64||cr.instance?.qrcode?.base64||cr.base64||cr.hash?.qrcode?.base64;
+    if(qr0){ console.log('[QR] QR encontrado na criação!'); return res.json({ok:true,qr:qr0}); }
 
-    // Aguardar inicialização
-    await new Promise(r=>setTimeout(r,5000));
-
-    // Buscar instância com dados completos
-    const instances = await callEvolution('/instance/fetchInstances');
-    console.log('[QR] Instâncias:', JSON.stringify(instances).slice(0,500));
-    
-    const inst = Array.isArray(instances) ? instances.find(i=>i.name===INSTANCE_NAME||i.instanceName===INSTANCE_NAME) : null;
-    console.log('[QR] Minha instância keys:', inst ? Object.keys(inst) : 'não encontrada');
-    
-    // QR pode estar dentro da instância
-    const qr1 = inst?.qrcode?.base64||inst?.hash?.qrcode?.base64;
+    // Chamar /connect IMEDIATAMENTE após criação (antes de fechar)
+    console.log('[QR] Chamando connect imediatamente...');
+    const conn1 = await callEvolution('/instance/connect/'+INSTANCE_NAME);
+    console.log('[QR] Connect imediato:', JSON.stringify(conn1).slice(0,400));
+    const qr1 = conn1.base64||conn1.qrcode?.base64||conn1.code||conn1.pairingCode;
     if(qr1){ return res.json({ok:true,qr:qr1}); }
 
-    // Chamar connect
-    const conn = await callEvolution('/instance/connect/'+INSTANCE_NAME);
-    console.log('[QR] Connect completo:', JSON.stringify(conn).slice(0,500));
-    
-    const qr2 = conn.base64||conn.qrcode?.base64||conn.code||conn.qr;
+    // Aguardar 3s e tentar de novo
+    await new Promise(r=>setTimeout(r,3000));
+    const conn2 = await callEvolution('/instance/connect/'+INSTANCE_NAME);
+    console.log('[QR] Connect +3s:', JSON.stringify(conn2).slice(0,400));
+    const qr2 = conn2.base64||conn2.qrcode?.base64||conn2.code||conn2.pairingCode;
     if(qr2){ return res.json({ok:true,qr:qr2}); }
 
-    // Aguardar mais e tentar connect de novo
+    // Aguardar mais 5s
     await new Promise(r=>setTimeout(r,5000));
-    const conn2 = await callEvolution('/instance/connect/'+INSTANCE_NAME);
-    console.log('[QR] Connect2:', JSON.stringify(conn2).slice(0,300));
-    const qr3 = conn2.base64||conn2.qrcode?.base64||conn2.code;
+    const conn3 = await callEvolution('/instance/connect/'+INSTANCE_NAME);
+    console.log('[QR] Connect +8s:', JSON.stringify(conn3).slice(0,400));
+    const qr3 = conn3.base64||conn3.qrcode?.base64||conn3.code||conn3.pairingCode;
     if(qr3){ return res.json({ok:true,qr:qr3}); }
 
-    res.json({ok:false, error:'QR sendo gerado — clique novamente em 5 segundos', 
-      hint:'Verifique os logs do Railway para mais detalhes'});
+    res.json({ok:false, error:'QR sendo gerado — clique novamente em 5 segundos'});
   }catch(e){
     console.error('[QR]',e.message);
     res.status(500).json({ok:false,error:e.message});
@@ -89,7 +83,7 @@ app.get('/qr', async (req,res)=>{
 app.post('/send', async (req,res)=>{
   try{
     const {phone,message}=req.body;
-    if(!phone||!message) return res.status(400).json({ok:false,error:'phone e message obrigatórios'});
+    if(!phone||!message) return res.status(400).json({ok:false});
     const num=phone.replace(/\D/g,'');
     const data=await callEvolution('/message/sendText/'+INSTANCE_NAME,'POST',{
       number:num.startsWith('55')?num:'55'+num, text:message
@@ -126,12 +120,10 @@ app.post('/disconnect', async (req,res)=>{
 
 app.get('/debug', async (req,res)=>{
   const state=await callEvolution('/instance/connectionState/'+INSTANCE_NAME).catch(e=>({error:e.message}));
-  const instances=await callEvolution('/instance/fetchInstances').catch(e=>({error:e.message}));
   const connect=await callEvolution('/instance/connect/'+INSTANCE_NAME).catch(e=>({error:e.message}));
-  res.json({evolutionUrl:EVOLUTION_URL,instanceName:INSTANCE_NAME,state,connect,
-    instances:Array.isArray(instances)?instances.map(i=>({name:i.name,status:i.connectionStatus,keys:Object.keys(i)})):instances});
+  res.json({evolutionUrl:EVOLUTION_URL,instanceName:INSTANCE_NAME,state,connect});
 });
 
-app.get('/health', (req,res)=>res.json({ok:true,service:'RHF Evolution Proxy v8',ts:Date.now()}));
+app.get('/health', (req,res)=>res.json({ok:true,service:'RHF Evolution Proxy v9',ts:Date.now()}));
 
-app.listen(PORT,()=>console.log('RHF Evolution Proxy v8 porta '+PORT));
+app.listen(PORT,()=>console.log('RHF Evolution Proxy v9 porta '+PORT));
