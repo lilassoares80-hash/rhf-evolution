@@ -344,7 +344,7 @@ nav{flex:1;padding:10px 8px;overflow-y:auto}
 (function(){
   var v='9.23.0';
   var base='https://www.gstatic.com/firebasejs/'+v+'/';
-  var libs=['firebase-app-compat.js','firebase-auth-compat.js','firebase-firestore-compat.js'];
+  var libs=['firebase-app-compat.js','firebase-auth-compat.js','firebase-firestore-compat.js','firebase-database-compat.js'];
   var loaded=0;
 
   function allLoaded(){
@@ -354,6 +354,7 @@ nav{flex:1;padding:10px 8px;overflow-y:auto}
         if(!firebase.apps||!firebase.apps.length) firebase.initializeApp(window.__fbConfig);
         window.__fbAuth=firebase.auth();
         window.__fbDb=firebase.firestore();
+        window.__fbRtdb=firebase.database(); // Realtime Database para sync em tempo real
       }catch(e){ window.__fbReady=false; }
     }
     if(window.__fbOnReady) window.__fbOnReady();
@@ -1337,8 +1338,9 @@ async function loadCloud(k){
 function save(k){
   try {
     LS.set(k, S[k]);
-    saveCloud(k, S[k]); // assíncrono — não bloqueia
-    console.log('[IntegraVagas] dados salvos:', k, Array.isArray(S[k])?S[k].length+'itens':'ok');
+    saveCloud(k, S[k]);   // Firestore (backup)
+    saveRtdb(k, S[k]);    // Realtime Database (sync em tempo real entre dispositivos)
+    console.log('[IntegraVagas] dados salvos:', k, Array.isArray(S[k])?S[k].length+' itens':'ok');
   } catch(e) {
     console.error('[IntegraVagas] erro ao salvar', k, e);
   }
@@ -4944,11 +4946,10 @@ Retorne APENAS JSON válido neste formato (sem texto antes ou depois):
   }catch(e){ return null; }
 }
 
-function abrirAgendaIntegrada(recId){
+async function abrirAgendaIntegrada(recId){
   const rec = S.recruiters.find(r=>r.id===recId)||{name:'Recrutadora'};
-  const key = 'rhf:agenda2_'+recId;
-  let agendas = [];
-  try{ agendas = JSON.parse(localStorage.getItem(key)||'[]'); }catch(e){}
+  // Carregar da nuvem (com fallback para localStorage)
+  let agendas = await loadAgendaCloud(recId);
   agendas.sort((a,b)=>new Date(a.dataISO||0)-new Date(b.dataISO||0));
   const hoje = new Date();
   const proximas = agendas.filter(a=>new Date(a.dataISO)>=hoje);
@@ -5094,7 +5095,7 @@ async function _abrirNovaEntrevistaIntegrada(recId){
       const key='rhf:agenda2_'+recId;
       let arr=[]; try{arr=JSON.parse(localStorage.getItem(key)||'[]');}catch(e){}
       arr.push(entrevista);
-      localStorage.setItem(key,JSON.stringify(arr));
+      await saveAgendaCloud(recId, arr);
 
       // Vincular ao candidato
       const candObj = S.candidates.find(c2=>c2.name===cand);
@@ -5193,7 +5194,7 @@ function _avaliarEntrevista(idx, recId){
 
     const btn=document.getElementById('btn-av-salvar');
     if(!btn) return;
-    btn.onclick=()=>{
+    btn.onclick=async ()=>{
       const status=document.getElementById('av-status')?.value||'';
       const motivo=document.getElementById('av-motivo')?.value||'';
       const proximo=document.getElementById('av-proximo')?.value||'';
@@ -5202,9 +5203,9 @@ function _avaliarEntrevista(idx, recId){
 
       // Atualizar na agenda
       const k='rhf:agenda2_'+rid;
-      let ag=[]; try{ag=JSON.parse(localStorage.getItem(k)||'[]');}catch(e){}
+      let ag = await loadAgendaCloud(rid);
       if(ag[i]){ ag[i].status=status; ag[i].motivoReprovacao=motivo; }
-      localStorage.setItem(k,JSON.stringify(ag));
+      await saveAgendaCloud(rid, ag);
 
       // Atualizar no candidato
       const candObj = S.candidates.find(c2=>c2.name===a.candidato);
@@ -5319,12 +5320,12 @@ function _enviarLembreteCandidatoV2(idx, recId){
   else { navigator.clipboard?.writeText(msg).then(()=>notify('📋 Mensagem copiada!')); }
 }
 
-function _excluirEntrevistaV2(idx, recId){
+async function _excluirEntrevistaV2(idx, recId){
   if(!confirm('Excluir esta entrevista?')) return;
   const key='rhf:agenda2_'+recId;
-  let arr=[]; try{arr=JSON.parse(localStorage.getItem(key)||'[]');}catch(e){}
+  let arr = await loadAgendaCloud(recId);
   arr.splice(parseInt(idx),1);
-  localStorage.setItem(key,JSON.stringify(arr));
+  await saveAgendaCloud(recId, arr);
   closeMo();
   setTimeout(()=>abrirAgendaIntegrada(recId),100);
 }
@@ -5439,7 +5440,8 @@ function _buildMsgEntrevistaRHF(cand, job){
   const dt   = cand.interviewRhfDate||'';
   const hr   = cand.interviewRhfHour||'';
   const link = cand.interviewRhfLink||document.getElementById('ci-rhf-link')?.value||'';
-  const discCheck = document.getElementById('disc-incluir-conv');
+  const discCheck = document.getElementById('disc-incluir-conv') 
+    || document.getElementById('rhf-enviar-disc');
   const incluirDisc = !discCheck || discCheck.checked;
   const discURL = incluirDisc && cand.id
     ? '\n\n📊 Avaliação de perfil (DISC — parte do processo):\n'+
@@ -5751,6 +5753,123 @@ function abrirCalendarioEntrevistas(){
     +'<button class="btn bp bsm" onclick="saveCandEAgendar&&notify(\'Use o botão + Cand. para agendar\')"  style="background:#7c3aed;color:#fff;border:none">+ Nova entrevista</button>',
   true);
 }
+
+
+// ═══ AGENDA — FIRESTORE ═══
+async function saveAgendaCloud(recId, agendas){
+  try{
+    if(!db) return;
+    const user = window.__fbAuth?.currentUser;
+    if(!user) return;
+    // Salvar no localStorage como cache
+    localStorage.setItem('rhf:agenda2_'+recId, JSON.stringify(agendas));
+    // Salvar no Firestore
+    await db.collection('crm_data').doc('agenda_'+recId).set({
+      data: JSON.stringify(agendas),
+      recId, updatedAt: Date.now(),
+      updatedBy: user.email||user.uid
+    });
+  }catch(e){ console.error('[Agenda]',e); }
+}
+
+async function loadAgendaCloud(recId){
+  try{
+    // Tentar Firestore primeiro
+    if(db){
+      const doc = await db.collection('crm_data').doc('agenda_'+recId).get();
+      if(doc.exists){
+        const agendas = JSON.parse(doc.data().data||'[]');
+        // Atualizar cache local
+        localStorage.setItem('rhf:agenda2_'+recId, JSON.stringify(agendas));
+        return agendas;
+      }
+    }
+  }catch(e){ console.error('[Agenda load]',e); }
+  // Fallback para localStorage
+  try{ return JSON.parse(localStorage.getItem('rhf:agenda2_'+recId)||'[]'); }catch(e){ return []; }
+}
+
+async function saveMetasCloud(uid, metas){
+  try{
+    if(!db) return;
+    localStorage.setItem('rhf:metas_'+uid, JSON.stringify(metas));
+    await db.collection('crm_data').doc('metas_'+uid).set({
+      data: JSON.stringify(metas),
+      uid, updatedAt: Date.now()
+    });
+  }catch(e){ console.error('[Metas]',e); }
+}
+
+async function loadMetasCloud(uid){
+  try{
+    if(db){
+      const doc = await db.collection('crm_data').doc('metas_'+uid).get();
+      if(doc.exists){
+        const metas = JSON.parse(doc.data().data||'{}');
+        localStorage.setItem('rhf:metas_'+uid, JSON.stringify(metas));
+        return metas;
+      }
+    }
+  }catch(e){}
+  try{ return JSON.parse(localStorage.getItem('rhf:metas_'+uid)||'{}'); }catch(e){ return {}; }
+}
+
+async function saveDespesasCloud(ano, mes, despesas, outrasEntradas){
+  try{
+    if(!db) return;
+    const key = ano+'_'+mes;
+    localStorage.setItem('rhf:despesas_'+key, JSON.stringify(despesas));
+    localStorage.setItem('rhf:outras_entradas_'+key, JSON.stringify(outrasEntradas));
+    await db.collection('crm_data').doc('financeiro_'+key).set({
+      despesas: JSON.stringify(despesas),
+      outrasEntradas: JSON.stringify(outrasEntradas),
+      ano, mes, updatedAt: Date.now()
+    });
+  }catch(e){ console.error('[Despesas]',e); }
+}
+
+async function loadDespesasCloud(ano, mes){
+  try{
+    if(db){
+      const doc = await db.collection('crm_data').doc('financeiro_'+ano+'_'+mes).get();
+      if(doc.exists){
+        const d = doc.data();
+        const despesas = JSON.parse(d.despesas||'[]');
+        const outrasEntradas = JSON.parse(d.outrasEntradas||'[]');
+        localStorage.setItem('rhf:despesas_'+ano+'_'+mes, JSON.stringify(despesas));
+        localStorage.setItem('rhf:outras_entradas_'+ano+'_'+mes, JSON.stringify(outrasEntradas));
+        return { despesas, outrasEntradas };
+      }
+    }
+  }catch(e){}
+  return {
+    despesas: JSON.parse(localStorage.getItem('rhf:despesas_'+ano+'_'+mes)||'[]'),
+    outrasEntradas: JSON.parse(localStorage.getItem('rhf:outras_entradas_'+ano+'_'+mes)||'[]')
+  };
+}
+
+
+window._gerarPerguntasAba2 = async (cid) => {
+  const cand = S.candidates.find(x=>x.id===cid);
+  if(!cand){ notify('Candidato não encontrado','e'); return; }
+  const job = S.jobs.find(j=>j.id===cand.jid)||{};
+  const btn = document.querySelector(`[onclick="_gerarPerguntasAba2('${cid}')"]`);
+  if(btn){ btn.textContent='⏳ Gerando...'; btn.disabled=true; }
+  const result = await _gerarPerguntasEntrevistaIA(job);
+  if(btn){ btn.textContent='✦ Gerar perguntas por competência'; btn.disabled=false; }
+  const area = document.getElementById('perguntas-aba2-'+cid);
+  if(!area) return;
+  if(result?.perguntas){
+    window._perguntasGeradas = result.perguntas;
+    area.innerHTML = '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px;font-size:12px">'
+      +'<div style="font-weight:600;color:#166534;margin-bottom:6px">✅ '+result.perguntas.length+' perguntas geradas</div>'
+      +result.perguntas.map((p,i)=>'<div style="padding:4px 0;border-bottom:1px solid #dcfce7"><strong>'+(i+1)+'. '+p.competencia+':</strong> '+p.pergunta+'</div>').join('')
+      +'</div>';
+    notify('✅ Perguntas geradas!');
+  } else {
+    area.innerHTML = '<div style="color:#dc2626;font-size:11px;padding:8px">❌ Configure a chave API Claude nas configurações para gerar perguntas.</div>';
+  }
+};
 
 function _hojeDDMMAAAA(){ const h=new Date(); return String(h.getDate()).padStart(2,'0')+'/'+String(h.getMonth()+1).padStart(2,'0')+'/'+h.getFullYear(); }
 
@@ -6842,12 +6961,14 @@ function importarBackup(input){
 
 // ═══ FIREBASE CONFIG ═══
 const firebaseConfig = {
-  apiKey: "AIzaSyAFd6FnCfnGSM-6Fv-f7qcQAvTMQnWUMvA",
-  authDomain: "crm-rhf---picarras.firebaseapp.com",
-  projectId: "crm-rhf---picarras",
-  storageBucket: "crm-rhf---picarras.firebasestorage.app",
-  messagingSenderId: "306011265299",
-  appId: "1:306011265299:web:9a1e2b344fba491fc722e6"
+  apiKey: "AIzaSyC61L45zENpyGV3KsvMjHw3sSHV9reB6Qo",
+  authDomain: "integra-vagas.firebaseapp.com",
+  databaseURL: "https://integra-vagas-default-rtdb.firebaseio.com",
+  projectId: "integra-vagas",
+  storageBucket: "integra-vagas.firebasestorage.app",
+  messagingSenderId: "646161721947",
+  appId: "1:646161721947:web:26564b21e5f006fe32ed7e",
+  measurementId: "G-36ER3RX9GT"
 };
 // Registrar config para o loader externo
 window.__fbConfig = firebaseConfig;
@@ -6922,6 +7043,12 @@ function showApp(){
   document.getElementById('login-page').style.display='none';
   document.getElementById('app').style.display='flex';
   loadData();
+  // Iniciar sincronização em tempo real entre dispositivos
+  setTimeout(()=>{
+    const uid = S.user?.uid || S.user?.email || 'rhf-default';
+    iniciarSyncRealtime(uid);
+    console.log('[IntegraVagas] Sync iniciado para usuário:', S.user?.name||uid);
+  }, 1500);
   // Verificar followups 2s após login
   setTimeout(()=>{
     if(S.user&&(S.user.role==='admin'||S.user.role==='comercial')) verificarFollowupsVencidos();
@@ -7164,6 +7291,123 @@ async function loadUserProfile(firebaseUser) {
 
 
 // ──────────────────────────────────────────────────────────────────────
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  SINCRONIZAÇÃO EM TEMPO REAL — Firebase Realtime Database               ║
+// ║  Todos os dispositivos veem os mesmos dados automaticamente              ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+let _rtdbListeners = {}; // Guardar listeners para poder remover
+let _rtdbSyncAtivo = false;
+let _rtdbUID = null;
+let _ignorarProxima = {}; // Evitar loop: minha própria escrita triggerando render
+
+// Iniciar sincronização em tempo real após login
+function iniciarSyncRealtime(uid){
+  const rtdb = window.__fbRtdb;
+  if(!rtdb || !uid){ console.warn('[Sync] RTDB não disponível'); return; }
+  if(_rtdbSyncAtivo){ console.log('[Sync] Já ativo'); return; }
+  _rtdbUID = uid;
+  _rtdbSyncAtivo = true;
+
+  const KEYS = ['jobs','candidates','clients','recruiters','prizes'];
+  const orgPath = 'rhf_crm'; // Namespace compartilhado da empresa
+
+  KEYS.forEach(k=>{
+    const ref = rtdb.ref(orgPath+'/'+k);
+
+    // Escutar mudanças em tempo real
+    const listener = ref.on('value', (snap)=>{
+      if(_ignorarProxima[k]){ _ignorarProxima[k]=false; return; }
+      const data = snap.val();
+      if(!data) return;
+
+      // Converter de objeto Firebase para array
+      const arr = Array.isArray(data) ? data : Object.values(data);
+      if(!arr || arr.length===0) return;
+
+      // Só atualizar se for diferente (evitar re-render desnecessário)
+      if(JSON.stringify(S[k])===JSON.stringify(arr)) return;
+
+      console.log('[Sync] '+k+' atualizado pela nuvem: '+arr.length+' itens');
+      S[k] = arr;
+      LS.set(k, arr); // Atualizar localStorage também
+
+      // Re-renderizar a tela atual se relevante
+      const pg = document.getElementById('pg-'+S.tab);
+      if(pg && typeof render==='function'){
+        try{ render(S.tab); } catch(e){}
+      }
+      _showSyncBadge('synced');
+    }, (err)=>{
+      console.warn('[Sync] Erro ao escutar '+k+':', err.message);
+    });
+
+    _rtdbListeners[k] = { ref, listener };
+  });
+
+  console.log('[Sync] Sincronização em tempo real ativa para', orgPath);
+  _showSyncBadge('synced');
+}
+
+// Parar sincronização (logout)
+function pararSyncRealtime(){
+  Object.entries(_rtdbListeners).forEach(([k, {ref, listener}])=>{
+    ref.off('value', listener);
+  });
+  _rtdbListeners = {};
+  _rtdbSyncAtivo = false;
+  console.log('[Sync] Sincronização encerrada');
+}
+
+// Salvar no Realtime Database (chamado pelo save())
+function saveRtdb(k, data){
+  const rtdb = window.__fbRtdb;
+  if(!rtdb || !_rtdbSyncAtivo) return;
+  try{
+    _ignorarProxima[k] = true; // Evitar que nossa própria escrita trigger o listener
+    const orgPath = 'rhf_crm';
+    rtdb.ref(orgPath+'/'+k).set(data).then(()=>{
+      console.log('[Sync] '+k+' salvo na nuvem: '+( Array.isArray(data)?data.length:1)+' itens');
+      _showSyncBadge('saved');
+    }).catch(err=>{
+      _ignorarProxima[k] = false;
+      console.warn('[Sync] Erro ao salvar '+k+':', err.message);
+    });
+  } catch(e){
+    _ignorarProxima[k] = false;
+    console.warn('[Sync] Erro RTDB:', e.message);
+  }
+}
+
+// Badge visual de sincronização
+function _showSyncBadge(estado){
+  let badge = document.getElementById('sync-badge');
+  if(!badge){
+    badge = document.createElement('div');
+    badge.id = 'sync-badge';
+    badge.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:9999;'+
+      'padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;'+
+      'transition:all .3s;pointer-events:none;opacity:0';
+    document.body.appendChild(badge);
+  }
+  if(estado==='saving'){
+    badge.textContent = '☁️ Salvando...';
+    badge.style.background = '#fef3c7'; badge.style.color = '#92400e';
+    badge.style.opacity = '1';
+  } else if(estado==='saved'){
+    badge.textContent = '✅ Salvo na nuvem';
+    badge.style.background = '#dcfce7'; badge.style.color = '#166534';
+    badge.style.opacity = '1';
+    setTimeout(()=>{ badge.style.opacity='0'; }, 2000);
+  } else if(estado==='synced'){
+    badge.textContent = '🔄 Sincronizado';
+    badge.style.background = '#dbeafe'; badge.style.color = '#1e40af';
+    badge.style.opacity = '1';
+    setTimeout(()=>{ badge.style.opacity='0'; }, 1500);
+  }
+}
+
+
 // ④ PERSISTÊNCIA — Carregamento e salvamento de dados
 // ──────────────────────────────────────────────────────────────────────
 function loadData(){
@@ -12216,11 +12460,20 @@ function openEditCand(cid, abaInicial){
     window._editCandAba = aba;
     const job = S.jobs.find(j=>j.id===c.jid)||{};
     const cl  = getClient(job.cid||'');
+    // Mapear etapa do candidato para aba correspondente
+    const etapaParaAba = {
+      'Triagem':'aba1','Cadastro':'aba1',
+      'Entrevista RH':'aba2','Entrevista RHF':'aba2',
+      'DISC':'aba3','Parecer':'aba3','Parecer Enviado':'aba3',
+      'Entrevista Cliente':'aba4',
+      'Aprovado':'aba5','Reprovado':'aba5','Desistente':'aba5','Contratado':'aba5'
+    };
+    const abaAtiva = etapaParaAba[c.etapa||'Triagem']||'aba1';
     const tabBar = [
       {id:'aba1',label:'1. Cadastro'},
       {id:'aba2',label:'2. Entrevista RHF'},
-      {id:'aba3',label:'3. Parecer Enviado'},
-      {id:'aba4',label:'4. Entrevista Cliente'},
+      {id:'aba3',label:'3. Parecer'},
+      {id:'aba4',label:'4. Ent. Cliente'},
       {id:'aba5',label:'5. Resultado'},
     ].map(t=>`<button onclick="window.renderAbasCandEdit('${cid}','${t.id}')"
       style="padding:8px 14px;font-size:12px;font-weight:600;border:none;cursor:pointer;
@@ -12354,6 +12607,10 @@ function openEditCand(cid, abaInicial){
             </button>
             <button class="btn bs bsm" data-cid="${cid}" onclick="_salvarEntrevistaRHF(this.dataset.cid)">
               💾 Salvar entrevista
+            </button>
+            <button class="btn bsm" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0" 
+              data-cid="${cid}" onclick="_salvarEntrevistaRHF(this.dataset.cid);setTimeout(()=>window.renderAbasCandEdit('${cid}','aba3'),300)">
+              ✅ Salvar e ir para DISC & Parecer →
             </button>
           </div>
         </div>
@@ -13031,7 +13288,11 @@ function abrirParecer(cid){
     </p>`,
     `<button class="btn bg bsm" onclick="closeMo()">Fechar</button>
      <button class="btn bs bsm" onclick="salvarParecer('${cid}')">💾 Salvar parecer</button>
-     <button class="btn bp bsm" onclick="imprimirParecer()">🖨️ Gerar PDF</button>`
+     <button class="btn bp bsm" onclick="imprimirParecer()">🖨️ Gerar PDF</button>
+     <button class="btn bsm" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0" 
+       onclick="salvarParecer('${cid}');closeMo();setTimeout(()=>{window._editCandAba='aba4';openEditCand('${cid}','aba4');},300)">
+       ✅ Salvar e ir para Entrevista Cliente →
+     </button>`
   );
 }
 
