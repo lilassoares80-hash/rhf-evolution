@@ -304,7 +304,7 @@ nav{flex:1;padding:10px 8px;overflow-y:auto}
         📥 Restaurar backup
         <input type="file" accept=".json" style="display:none" onchange="importarBackup(this)">
       </label>
-      <button title="Sincronizar dados do sistema com novos registros do SEED" onclick="sincronizarSeed()" title="Sincronizar novos clientes, vagas e candidatos do sistema"
+      <button title="Sincronizar dados do sistema com novos registros do SEED" onclick="sincronizarSeed();setTimeout(()=>forcarSincronizacaoNuvem(),1000)" 
         style="background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;border-radius:6px;padding:4px 8px;font-size:10px;font-weight:600;cursor:pointer;text-align:left;width:100%">
         🔄 Sincronizar dados do sistema
       </button>
@@ -353,17 +353,11 @@ nav{flex:1;padding:10px 8px;overflow-y:auto}
         if(!firebase.apps||!firebase.apps.length) firebase.initializeApp(window.__fbConfig);
         window.__fbAuth=firebase.auth();
         window.__fbDb=firebase.firestore();
-        window.__fbRtdb=firebase.database(); // Realtime Database para sync em tempo real
-        // Login anônimo automático para acessar o RTDB sem precisar de conta
-        window.__fbAuth.signInAnonymously().catch((err)=>{
-          // Se falhar (Auth não habilitado), NÃO marcar como offline
-          // O Firestore ainda pode funcionar com regras públicas
-          console.warn('[Firebase] signInAnonymously falhou:', err.code, '— continuando sem auth anônimo');
-        });
+        window.__fbRtdb=firebase.database();
       }catch(e){ window.__fbReady=false; }
     }
     if(window.__fbOnReady) window.__fbOnReady();
-    else window.__fbPendingReady=true; // Firebase carregou antes do app — sinaliza para chamar depois
+    else window.__fbPendingReady=true;
   }
 
   function loadNext(i){
@@ -387,6 +381,9 @@ nav{flex:1;padding:10px 8px;overflow-y:auto}
 </script>
 
 <script>
+
+// Helper: ternary html — avoids nested template literals que quebram parsers antigos
+function _h(cond, html, els){ return cond ? html : (els||''); }
 // ╔══════════════════════════════════════════════════════════════════════════╗
 // ║  IntegraVagas CRM — RHF Talentos                                        ║
 // ║                                                                          ║
@@ -795,7 +792,7 @@ const PERMS = {
     const map = {
       admin:     ['dashboard','vagas','candidatos','painel','recrutadoras','financeiro','clientes','usuarios','historico','whatsapp'],
       clt:       ['dashboard','vagas','candidatos','painel','recrutadoras'],
-      recruiter: ['dashboard','vagas','candidatos'],
+      recruiter: ['dashboard','vagas','candidatos','painel','recrutadoras'],
       comercial: ['dashboard','vagas','clientes'],
       financeiro:['financeiro','clientes'],
     };
@@ -1276,13 +1273,12 @@ function _showSyncBadge(status){
 async function saveCloud(k, data){
   try{
     if(!db) return;
+    // Tentar obter usuário autenticado — mas não bloquear se não tiver
     const user = window.__fbAuth?.currentUser;
-    if(!user) return;
     _showSyncBadge('saving');
     const meta = {
-      uid: user.uid,
       updatedAt: Date.now(),
-      updatedBy: user.email||user.uid,
+      updatedBy: user ? (user.email||user.uid) : (S.user?.email||'unknown'),
       count: Array.isArray(data)?data.length:1
     };
     // Chunks para arrays grandes (limite Firestore ~1MB/doc)
@@ -1301,8 +1297,14 @@ async function saveCloud(k, data){
     }
     _showSyncBadge('saved');
   } catch(e){
-    console.warn('saveCloud erro:', e.message);
-    _showSyncBadge('error');
+    // Erro de permissão — dados ficam locais, não bloquear o usuário
+    if(e.code === 'permission-denied'){
+      console.warn('[saveCloud] Sem permissão no Firestore para salvar "'+k+'". Dado salvo localmente.');
+      _showSyncBadge('error');
+    } else {
+      console.warn('saveCloud erro:', e.message);
+      _showSyncBadge('error');
+    }
   }
 }
 
@@ -1399,6 +1401,24 @@ function _dedupCandidatos(arr){
 }
 
 async function loadDataCloud(){
+  // Timeout de 8 segundos para não travar a tela
+  const timeout = new Promise(resolve => setTimeout(()=>resolve('timeout'), 8000));
+  const load = _loadDataCloudInternal();
+  const result = await Promise.race([load, timeout]);
+  if(result === 'timeout'){
+    console.warn('[loadDataCloud] Timeout — usando dados locais');
+    // Garantir que a tela renderize mesmo sem dados da nuvem
+    if(S.tab && typeof render === 'function'){
+      try{ render(S.tab); }catch(e){}
+    } else {
+      buildNav(); setTab('dashboard');
+    }
+    return false;
+  }
+  return result;
+}
+
+async function _loadDataCloudInternal(){
   const keys = ['jobs','candidates','clients','prizes','recruiters'];
   let anyCloud = false;
   for(const k of keys){
@@ -1466,9 +1486,7 @@ async function loadDataCloud(){
     }
   }
   return anyCloud;
-}
-
-// ═══ UTILS ═══
+} // fim _loadDataCloudInternal
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2)}
 function fmtDate(){const d=new Date();return`${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`}
 function pad(n){return String(n).padStart(2,'0')}
@@ -1891,7 +1909,7 @@ function renderWhatsApp(el){
               `).join('')}
             </div>`
         }
-        ${logs.length>0?`<button class="btn bsm" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer;margin-top:8px" onclick="waLimparLog()">🗑 Limpar histórico</button>`:''}
+        ${_h(logs.length>0, '<button class="btn bsm" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer;margin-top:8px" onclick="waLimparLog()">🗑 Limpar histórico</button>')}
       </div>
     </div>
   </div>`;
@@ -3418,20 +3436,47 @@ async function buscarCNPJ(cnpj, prefixo){
   if(num.length!==14){notify('CNPJ deve ter 14 dígitos','e');return;}
   try{
     notify('⏳ Buscando dados do CNPJ...');
-    const res=await fetch('https://brasilapi.com.br/api/cnpj/v1/'+num);
-    if(!res.ok) throw new Error('CNPJ não encontrado na Receita Federal');
-    const d=await res.json();
-    if(d.message||d.type==='service_error') throw new Error(d.message||'CNPJ não encontrado');
+    let d = null;
+    // Tentar BrasilAPI primeiro
+    try{
+      const res=await fetch('https://brasilapi.com.br/api/cnpj/v1/'+num);
+      if(res.ok){ d=await res.json(); if(d.message||d.type==='service_error') d=null; }
+    }catch(e1){ console.warn('BrasilAPI falhou, tentando ReceitaWS...'); }
+    // Fallback: ReceitaWS
+    if(!d){
+      try{
+        const res2=await fetch('https://receitaws.com.br/v1/cnpj/'+num);
+        if(res2.ok){
+          const d2=await res2.json();
+          if(d2.status==='OK'){
+            d={
+              razao_social: d2.nome,
+              cep: (d2.cep||'').replace(/\D/g,''),
+              logradouro: d2.logradouro,
+              numero: d2.numero,
+              bairro: d2.bairro,
+              complemento: d2.complemento,
+              municipio: d2.municipio,
+              uf: d2.uf
+            };
+          }
+        }
+      }catch(e2){ console.warn('ReceitaWS também falhou:', e2.message); }
+    }
+    if(!d) throw new Error('CNPJ não encontrado. Verifique o número e tente novamente.');
     const trySet=(ids,val)=>{if(!val)return;for(const id of ids){const el=document.getElementById(id);if(el){el.value=val;return;}}};
     trySet(['cln','cln-edit'],d.razao_social||'');
-    const cepFmt=(d.cep||'').replace(/\D/g,'');
-    trySet(['cl-cep','cl-cep-edit','clnew-cep'],cepFmt.length===8?cepFmt.slice(0,5)+'-'+cepFmt.slice(5):'');
+    const cepNum=(d.cep||'').replace(/\D/g,'');
+    const cepFmt=cepNum.length===8?cepNum.slice(0,5)+'-'+cepNum.slice(5):'';
+    trySet(['cl-cep','cl-cep-edit'],cepFmt);
     trySet(['cl-logradouro','cl-logradouro-edit'],(d.logradouro||''));
     trySet(['cl-numero','cl-numero-edit'],d.numero&&d.numero!=='S/N'?d.numero:'');
     trySet(['cl-bairro','cl-bairro-edit'],d.bairro||'');
     trySet(['cl-complemento','cl-complemento-edit'],d.complemento||'');
     trySet(['clcity','clcity-edit'],(d.municipio||'')+'/'+(d.uf||''));
     trySet(['clcnpj','clcnpj-edit'],cnpj);
+    // Se CEP foi preenchido, buscar endereço completo automaticamente
+    if(cepFmt) buscarCEP(cepFmt, 'cl');
     notify('✅ Dados do CNPJ carregados!');
   }catch(e){notify('❌ '+e.message,'e');console.error('buscarCNPJ:',e);}
 }
@@ -4794,10 +4839,14 @@ function _executarBuscaGlobal(q){
       .forEach(j=>{
         const cl=getClient(j.cid||'');
         const stColors={'aberta':'#16a34a','Triagem':'#1A4B8F','Entrevista':'#7c3aed','Finalistas':'#d97706','Fechada':'#166534','Encerrada':'#64748b'};
+        // PJ não vê nome do cliente — só título e cidade
+        const subVaga = S.user.role==='recruiter'
+          ? (j.city||'—')+' · '+(j.salary||'—')
+          : (cl.name||j.city||'—')+' · '+(j.salary||'—');
         resultados.push({
           tipo:'vaga', icon:'◈', cor:'#1A4B8F',
           titulo:j.title,
-          sub:(cl.name||j.city||'—')+' · '+(j.salary||'—'),
+          sub: subVaga,
           badge:j.status||'aberta',
           badgeCor:stColors[j.status||'aberta']||'#64748b',
           id:j.id
@@ -4805,8 +4854,8 @@ function _executarBuscaGlobal(q){
       });
   }
 
-  // ── Clientes ──
-  if(!tipo||tipo==='cliente'){
+  // ── Clientes — apenas admin e CLT ──
+  if((!tipo||tipo==='cliente') && S.user.role !== 'recruiter'){
     S.clients
       .filter(cl=>{
         return [cl.name,cl.cnpj,cl.city,cl.phone,cl.email,cl.contact,cl.logradouro,cl.bairro,cl.notes]
@@ -4856,6 +4905,11 @@ function _executarBuscaGlobal(q){
 function _abrirResultadoBusca(tipo, id){
   S._bgQuery = document.getElementById('busca-global-inp')?.value || '';
   closeMo();
+  // PJ não pode acessar dados de clientes
+  if(tipo==='cliente' && S.user.role==='recruiter'){
+    notify('🔒 Acesso restrito — recrutadoras PJ não têm acesso aos dados de clientes.','e');
+    return;
+  }
   if(tipo==='candidato'){
     setTab('candidatos');
     setTimeout(()=>openEditCand(id), 350);
@@ -6794,7 +6848,82 @@ function resetarParaSeed(){
 }
 
 // Sincronizar novos itens do SEED sem apagar dados existentes
-function sincronizarSeed(){
+// ═══ SINCRONIZAÇÃO FORÇADA PARA A NUVEM ═══════════════════════════════════════
+// Envia TODOS os dados locais para o Firestore + RTDB de uma vez
+// Usado quando o admin quer garantir que todas as usuárias vejam os mesmos dados
+async function forcarSincronizacaoNuvem(silencioso=false){
+  if(!db || window.__fbOffline){
+    notify('⚠️ Firebase indisponível. Verifique sua conexão.','e');
+    return false;
+  }
+  if(!silencioso) notify('⏳ Enviando todos os dados para o servidor...');
+  try{
+    const keys = ['jobs','candidates','clients','recruiters','prizes'];
+    for(const k of keys){
+      if(S[k] && S[k].length > 0){
+        await saveCloud(k, S[k]);
+        saveRtdb(k, S[k]);
+      }
+    }
+    if(!silencioso) notify('✅ Dados enviados! Todas as usuárias verão as informações atualizadas.');
+    // Remover banner de aviso se existir
+    document.getElementById('sync-warning-banner')?.remove();
+    return true;
+  } catch(e){
+    notify('❌ Erro ao sincronizar: '+e.message,'e');
+    return false;
+  }
+}
+
+// Verificar se dados locais estão mais atualizados que a nuvem
+// Se sim, mostrar aviso para o admin sincronizar
+async function verificarSincronizacaoNuvem(){
+  if(!db || window.__fbOffline || S.user?.role !== 'admin') return;
+  try{
+    const doc = await db.collection('crm_data').doc('candidates').get();
+    const cloudCount = doc.exists ? (doc.data()?.data?.length || 0) : 0;
+    const localCount = S.candidates?.length || 0;
+    const diff = localCount - cloudCount;
+
+    // Se local tem 10+ registros a mais que a nuvem → avisar
+    if(diff >= 10){
+      _mostrarBannerSyncNuvem(localCount, cloudCount, diff);
+    } else if(diff > 0 && cloudCount === 0){
+      // Nuvem vazia — forçar sync automaticamente
+      await forcarSincronizacaoNuvem(true);
+      notify('☁️ Dados enviados automaticamente para o servidor!');
+    }
+  } catch(e){ console.warn('[verificarSync]', e.message); }
+}
+
+function _mostrarBannerSyncNuvem(local, cloud, diff){
+  if(document.getElementById('sync-warning-banner')) return; // já está mostrando
+  const banner = document.createElement('div');
+  banner.id = 'sync-warning-banner';
+  banner.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:10002;background:#fff;border:2px solid #f59e0b;border-radius:14px;padding:16px 20px;max-width:340px;box-shadow:0 8px 30px rgba(0,0,0,.15);font-family:Inter,sans-serif';
+  banner.innerHTML = `
+    <div style="display:flex;gap:10px;align-items:flex-start">
+      <div style="font-size:24px">☁️</div>
+      <div>
+        <div style="font-weight:700;font-size:13px;color:#1e293b;margin-bottom:4px">Dados desatualizados no servidor</div>
+        <div style="font-size:12px;color:#64748b;line-height:1.5;margin-bottom:10px">
+          Seus dados locais têm <strong>${local} candidatos</strong>, mas o servidor tem apenas <strong>${cloud}</strong>.<br>
+          As outras usuárias podem estar vendo informações desatualizadas.
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="forcarSincronizacaoNuvem()" style="background:#E85D1E;color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif">
+            🔄 Sincronizar agora
+          </button>
+          <button onclick="document.getElementById('sync-warning-banner').remove()" style="background:#f1f5f9;color:#64748b;border:none;border-radius:7px;padding:7px 10px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif">
+            Ignorar
+          </button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(banner);
+}
+
+
   const storedJobs  = LS.get('jobs')  || [];
   const storedCands = LS.get('candidates') || [];
   const storedCls   = LS.get('clients')   || [];
@@ -6962,7 +7091,6 @@ function sincronizarSeed(){
   })();
 
     notify('✅ Dados sincronizados. Despesas Jan-Abr 2026 atualizadas!');
-  }
 }
 
 function exportarBackup(){
@@ -7061,14 +7189,37 @@ function setupAuthListener(){
   setupAuthListener._called = true;
 
   if(auth && !window.__fbOffline){
-    // Firebase Auth disponível — usar email/senha
     auth.onAuthStateChanged(async (firebaseUser)=>{
       if(firebaseUser){
-        try{ S.user = await loadUserProfile(firebaseUser); }
-        catch(e){ S.user = _profileFromEmail(firebaseUser.email, firebaseUser.uid); }
+        // Entrar IMEDIATAMENTE com perfil básico — não bloquear no Firestore
+        const basicProfile = _profileFromEmail(firebaseUser.email, firebaseUser.uid);
+        S.user = basicProfile;
         LS.set('session', S.user);
         showApp();
         setTimeout(()=>iniciarSyncRealtime(firebaseUser.uid), 1500);
+        // Buscar perfil completo do Firestore em background (sem bloquear)
+        try{
+          const fullProfile = await Promise.race([
+            loadUserProfile(firebaseUser),
+            new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),5000))
+          ]);
+          if(fullProfile && fullProfile.role && fullProfile.role !== 'pending'){
+            S.user = fullProfile;
+            LS.set('session', S.user);
+            // Atualizar nome/papel na sidebar sem recarregar tudo
+            const ub = document.getElementById('ub');
+            if(ub) ub.innerHTML = (S.user.role==='admin'?'🔑 ':S.user.role==='comercial'?'💼 ':'👤 ')+S.user.name
+              +'<br><span style="font-size:10px;opacity:.7">'+(S.user.email||'')+'</span>';
+            const roleBadge = document.getElementById('user-role-badge');
+            if(roleBadge){
+              const roleNames = {admin:'🔑 Administrador',clt:'👔 Rec. CLT',recruiter:'👤 Rec. PJ',comercial:'💼 Comercial'};
+              roleBadge.textContent = roleNames[S.user.role] || S.user.role;
+            }
+            buildNav();
+          }
+        }catch(e){
+          console.warn('[Auth] Perfil Firestore indisponível, usando básico:', e.message);
+        }
       } else {
         // Sem usuário Firebase autenticado
         // MAS o Firebase está disponível — buscar dados da nuvem mesmo assim
@@ -7107,24 +7258,19 @@ function setupAuthListener(){
 
 // Mapear email para perfil quando não está no Firestore
 function _profileFromEmail(email, uid){
-  const MAP = {
-    'lilianesoares@rhf.com.br':  {name:'Liliane',    role:'admin'},
-    'lilassoares80@gmail.com':   {name:'Liliane',    role:'admin'},
-    'lilianesoares80@gmail.com': {name:'Liliane',    role:'admin'},
-    'patricia@rhf.com.br':       {name:'Patricia',   role:'clt'},
-    'cris@rhf.com.br':           {name:'Cris Dantas',role:'clt'},
-    'crisdantas@rhf.com.br':     {name:'Cris Dantas',role:'clt'},
-    'evelyn@rhf.com.br':         {name:'Evelyn',     role:'clt'},
-    'pedro@rhf.com.br':          {name:'Pedro',      role:'pj'},
-    'monick@rhf.com.br':         {name:'Monick',     role:'pj'},
-    'milena@rhf.com.br':         {name:'Milena',     role:'pj'},
-    'beatriz@rhf.com.br':        {name:'Beatriz',    role:'pj'},
-    'rosicler@rhf.com.br':       {name:'Rosicler',   role:'pj'},
-    'danielle@rhf.com.br':       {name:'Danielle',   role:'admin'},
-    'rhfpicarrassc@gmail.com':   {name:'RHF Admin',  role:'admin'},
+  // Apenas a administradora master tem role garantido por email
+  // Todos os outros usuários devem ser cadastrados pela tela de Usuários
+  // e ter seu papel salvo no Firestore
+  const MASTERS = {
+    'lilianesoares@rhf.com.br':  {name:'Liliane', role:'admin'},
+    'lilassoares80@gmail.com':   {name:'Liliane', role:'admin'},
+    'lilianesoares80@gmail.com': {name:'Liliane', role:'admin'},
+    'rhfpicarrassc@gmail.com':   {name:'Liliane', role:'admin'},
   };
-  const p = MAP[email.toLowerCase()] || {name:email.split('@')[0], role:'recruiter'};
-  return {uid, email, name:p.name, role:p.role, recId:null};
+  const p = MASTERS[email.toLowerCase()];
+  if(p) return {uid, email, name:p.name, role:p.role, recId:null};
+  // Usuário não cadastrado — acesso negado até ser cadastrado pelo admin
+  return {uid, email, name: email.split('@')[0], role: 'pending', recId: null};
 }
 
 
@@ -7132,12 +7278,30 @@ function showApp(){
   document.getElementById('login-page').style.display='none';
   document.getElementById('app').style.display='flex';
 
+  // Bloquear apenas usuários explicitamente marcados como pending NO Firestore
+  // (não bloquear se o perfil simplesmente não foi encontrado)
+  if(S.user.role === 'pending'){
+    document.getElementById('content').innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;gap:16px;padding:24px;text-align:center">
+        <div style="font-size:48px">🔒</div>
+        <h2 style="font-size:20px;font-weight:800;color:#1e293b">Acesso pendente de aprovação</h2>
+        <p style="font-size:14px;color:#64748b;max-width:400px;line-height:1.6">
+          Seu e-mail <strong>${S.user.email}</strong> foi autenticado mas seu acesso ainda não foi configurado.<br><br>
+          Solicite à administradora que acesse <strong>Usuários → ✏️ Editar</strong> seu cadastro e defina seu papel.
+        </p>
+        <button onclick="auth.signOut();location.reload()" style="background:#E85D1E;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer">
+          Sair
+        </button>
+      </div>`;
+    buildNav();
+    return;
+  }
+
   // Se Firebase disponível, SEMPRE sincronizar com a nuvem
-  // (independente de ter dados locais ou não)
   const temDadosLocais = !!(LS.get('candidates') && LS.get('candidates').length > 50);
 
   if(!window.__fbOffline && !temDadosLocais){
-    // Perfil novo/sem dados — mostrar loading e aguardar nuvem
+    // Perfil novo/sem dados locais — mostrar loading e aguardar nuvem (max 8s)
     const content = document.getElementById('content');
     if(content){
       content.innerHTML = `
@@ -7154,22 +7318,21 @@ function showApp(){
       const uid = S.user?.uid || S.user?.email || 'rhf-default';
       iniciarSyncRealtime(uid);
       try{ await loadDataCloud(); } catch(e){ console.warn('Cloud load error:', e); }
+      // SEMPRE renderizar — mesmo se a nuvem falhou ou deu timeout
       buildNav(); setTab('dashboard');
     }, 800);
   } else {
-    // Tem dados locais — carregar imediatamente
+    // Tem dados locais — renderizar imediatamente
     loadData();
     buildNav(); setTab('dashboard');
-    // Sincronizar com a nuvem em background SEMPRE (dados locais podem estar desatualizados)
+    // Sincronizar com a nuvem em background
     setTimeout(async ()=>{
       const uid = S.user?.uid || S.user?.email || 'rhf-default';
       if(!window.__fbOffline){
         iniciarSyncRealtime(uid);
         try{
           await loadDataCloud();
-          // Re-renderizar a tela atual com dados atualizados
           if(S.tab) try{ render(S.tab); }catch(e){}
-          // Remover banner de modo local se ainda existir
           const banner = document.getElementById('offline-app-banner');
           if(banner){ banner.remove(); document.getElementById('app').style.paddingTop=''; }
         } catch(e){ console.warn('Background sync error:', e); }
@@ -7197,6 +7360,30 @@ function showApp(){
   // Verificar followups
   setTimeout(()=>{
     if(S.user&&(S.user.role==='admin'||S.user.role==='comercial')) verificarFollowupsVencidos();
+  }, 3000);
+
+  // Verificar se dados locais estão à frente da nuvem (só admin)
+  if(S.user?.role === 'admin'){
+    setTimeout(()=> verificarSincronizacaoNuvem(), 4000);
+  }
+
+  // Testar permissão de escrita no Firestore para todos os usuários
+  setTimeout(async ()=>{
+    if(!db || window.__fbOffline) return;
+    try{
+      await db.collection('crm_ping').doc('test').set({
+        ts: Date.now(), user: S.user?.email||'unknown'
+      });
+      console.log('[Firestore] ✅ Permissão de escrita OK');
+    } catch(e){
+      if(e.code === 'permission-denied'){
+        console.warn('[Firestore] ❌ Sem permissão de escrita — verifique as regras do Firestore');
+        // Mostrar aviso apenas para admin
+        if(S.user?.role === 'admin'){
+          notify('⚠️ As regras do Firestore estão bloqueando escritas. Atualize as regras no Console Firebase para "allow read, write: if true;" temporariamente.','e');
+        }
+      }
+    }
   }, 3000);
 
   document.getElementById('ub').innerHTML=
@@ -7398,7 +7585,6 @@ async function doLogin(){
     err.textContent = 'Firebase indisponível. Use o seletor de nome abaixo.';
     err.style.display = 'block';
     setTimeout(()=>err.style.display='none', 4000);
-    // Mostrar instrução de hospedagem se estiver em file://
     if(window.location.protocol === 'file:'){
       _mostrarAvisoFileProtocol();
     } else {
@@ -7413,17 +7599,52 @@ async function doLogin(){
     setTimeout(()=>err.style.display='none', 3000);
     return;
   }
-  btn.textContent = 'Entrando...'; btn.disabled = true;
+
+  btn.textContent = '⏳ Entrando...'; btn.disabled = true;
+
+  // Timeout de segurança — se demorar mais de 12s, reabilitar o botão
+  const loginTimeout = setTimeout(()=>{
+    if(btn.disabled){
+      btn.textContent = 'Entrar no sistema'; btn.disabled = false;
+      err.textContent = 'O servidor demorou para responder. Tente novamente.';
+      err.style.display = 'block';
+      setTimeout(()=>err.style.display='none', 5000);
+    }
+  }, 12000);
+
   try {
     await auth.signInWithEmailAndPassword(email, pass);
+    clearTimeout(loginTimeout);
+    btn.textContent = '✅ Verificando acesso...';
     // onAuthStateChanged cuidará do restante
+    // Se em 8s o onAuthStateChanged não chamou showApp, forçar
+    setTimeout(()=>{
+      if(document.getElementById('login-page')?.style.display !== 'none'){
+        // Ainda na tela de login — tentar showApp manualmente
+        if(auth.currentUser){
+          loadUserProfile(auth.currentUser).then(profile=>{
+            S.user = profile;
+            LS.set('session', S.user);
+            showApp();
+          }).catch(()=>{
+            S.user = _profileFromEmail(auth.currentUser.email, auth.currentUser.uid);
+            LS.set('session', S.user);
+            showApp();
+          });
+        } else {
+          btn.textContent = 'Entrar no sistema'; btn.disabled = false;
+        }
+      }
+    }, 8000);
   } catch(e) {
+    clearTimeout(loginTimeout);
     const msgs = {
-      'auth/user-not-found': 'E-mail não cadastrado.',
-      'auth/wrong-password': 'Senha incorreta.',
-      'auth/invalid-email': 'E-mail inválido.',
+      'auth/user-not-found':    'E-mail não cadastrado.',
+      'auth/wrong-password':    'Senha incorreta.',
+      'auth/invalid-email':     'E-mail inválido.',
       'auth/too-many-requests': 'Muitas tentativas. Aguarde alguns minutos.',
-      'auth/invalid-credential': 'E-mail ou senha incorretos.',
+      'auth/invalid-credential':'E-mail ou senha incorretos.',
+      'auth/network-request-failed': 'Sem conexão. Verifique sua internet.',
     };
     err.textContent = msgs[e.code] || 'Erro ao entrar: ' + e.message;
     err.style.display = 'block';
@@ -7479,50 +7700,69 @@ async function doLoginGoogle(){
 async function loadUserProfile(firebaseUser) {
   const email = (firebaseUser.email||'').toLowerCase();
   const displayName = firebaseUser.displayName || '';
-  const ADMIN_EMAILS = ['lilianesoares@rhf.com.br'];
+  const ADMIN_EMAILS = ['lilianesoares@rhf.com.br','lilassoares80@gmail.com','lilianesoares80@gmail.com','rhfpicarrassc@gmail.com'];
   const forceAdmin = ADMIN_EMAILS.includes(email) || email.includes('liliane') || email.includes('admin@rhf');
+
+  if(forceAdmin){
+    return { uid: firebaseUser.uid, email: firebaseUser.email, name:'Liliane', role:'admin', recId:null };
+  }
 
   try {
     if(!db) throw new Error('Firestore indisponivel');
     const doc = await db.collection('users').doc(firebaseUser.uid).get();
-    if (doc.exists) {
+    if(doc.exists){
       const data = doc.data();
-      const role = forceAdmin ? 'admin' : (data.role || 'recruiter');
-      if(forceAdmin && data.role !== 'admin'){
-        try{ await db.collection('users').doc(firebaseUser.uid).update({role:'admin'}); }catch(_){}
-      }
+      // Bloquear apenas se explicitamente pending
+      const role = data.role || 'recruiter';
       return {
-        uid: firebaseUser.uid,
+        uid:   firebaseUser.uid,
         email: firebaseUser.email,
-        name: data.name || displayName || firebaseUser.email,
-        role: role,
+        name:  data.name || displayName || email.split('@')[0],
+        role,
+        recId: data.recId || null,
+      };
+    }
+    // Documento não existe ainda — tentar buscar por email
+    const byEmail = await db.collection('users').where('email','==',firebaseUser.email).limit(1).get();
+    if(!byEmail.empty){
+      const data = byEmail.docs[0].data();
+      // Salvar com o UID correto para próximos logins
+      try{ await db.collection('users').doc(firebaseUser.uid).set({...data, uid: firebaseUser.uid},{merge:true}); }catch(_){}
+      return {
+        uid:   firebaseUser.uid,
+        email: firebaseUser.email,
+        name:  data.name || email.split('@')[0],
+        role:  data.role || 'recruiter',
         recId: data.recId || null,
       };
     }
   } catch(e) {
-    try{console.warn('Firestore não disponível, usando fallback:', e.message);}catch(_){}
+    console.warn('[loadUserProfile] Firestore erro:', e.message, '— código:', e.code);
+    // Se erro de permissão, avisar mas não bloquear
+    if(e.code === 'permission-denied'){
+      console.warn('[loadUserProfile] Regras do Firestore bloqueando leitura de users. Verifique o Console Firebase.');
+    }
   }
-  // Fallback: detectar role pelo e-mail
-  const isAdmin = forceAdmin || email.includes('rhf') || displayName.toLowerCase().includes('liliane');
-  // Tentar mapear pelo nome do Google ou e-mail para recrutadora existente
+
+  // Fallback final — usuário autenticado mas sem perfil no Firestore
+  // Dar acesso básico de recruiter para não bloquear o login
   const recMatch = SEED_R.find(r => {
     const rname = r.name.toLowerCase();
-    return email.includes(rname.replace(' ','').replace(' ','.')) ||
-           displayName.toLowerCase().includes(rname.split(' ')[0]);
+    return email.includes(rname.split(' ')[0].toLowerCase()) ||
+           (displayName||'').toLowerCase().includes(rname.split(' ')[0].toLowerCase());
   });
-  // Se é usuário novo via Google, criar perfil no Firestore automaticamente
   const profile = {
-    uid: firebaseUser.uid,
-    email: firebaseUser.email,
-    name: recMatch ? recMatch.name : (displayName || firebaseUser.email.split('@')[0]),
-    role: isAdmin ? 'admin' : 'recruiter',
-    recId: recMatch ? recMatch.id : null,
+    uid:      firebaseUser.uid,
+    email:    firebaseUser.email,
+    name:     recMatch ? recMatch.name : (displayName || email.split('@')[0]),
+    role:     'recruiter',
+    recId:    recMatch ? recMatch.id : null,
     photoURL: firebaseUser.photoURL || null,
   };
-  // Salvar perfil no Firestore se não existia (primeiro login Google)
-  try {
-    await db.collection('users').doc(firebaseUser.uid).set(profile, { merge: true });
-  } catch(e) { console.warn('Não foi possível salvar perfil:', e.message); }
+  // Tentar criar perfil no Firestore
+  try{
+    await db.collection('users').doc(firebaseUser.uid).set(profile, {merge:true});
+  }catch(e){ console.warn('Não foi possível salvar perfil:', e.message); }
   return profile;
 }
 
@@ -7543,19 +7783,7 @@ function iniciarSyncRealtime(uid){
   const rtdb = window.__fbRtdb;
   if(!rtdb){ console.warn('[Sync] RTDB não disponível'); return; }
   if(_rtdbSyncAtivo){ console.log('[Sync] Já ativo'); return; }
-
-  // Garantir login anônimo no Firebase Auth antes de usar o RTDB
-  const auth = window.__fbAuth;
-  if(auth && !auth.currentUser){
-    auth.signInAnonymously()
-      .then(()=>{ _iniciarListenersRTDB(uid); })
-      .catch(e=>{
-        console.warn('[Sync] Auth anônimo falhou, tentando direto:', e.code);
-        _iniciarListenersRTDB(uid);
-      });
-  } else {
-    _iniciarListenersRTDB(uid);
-  }
+  _iniciarListenersRTDB(uid);
 }
 
 function _iniciarListenersRTDB(uid){
@@ -7745,6 +7973,19 @@ function loadData(){
 
   S.prizes     = LS.get('prizes')  || [];
   S.apiKey     = LS.get('apiKey')  || '';
+
+  // ── Normalizar premCustomRate dos candidatos (0.05 → 5, 0.10 → 10) ──────────
+  let _fixedRates = 0;
+  S.candidates = S.candidates.map(c=>{
+    const pr = c.premCustomRate;
+    if(pr && pr > 0 && pr < 1){ _fixedRates++; return {...c, premCustomRate: Math.round(pr*100)}; }
+    return c;
+  });
+  if(_fixedRates > 0){
+    LS.set('candidates', S.candidates);
+    console.log('[IntegraVagas] Corrigidos '+_fixedRates+' premCustomRate decimais (0.05→5)');
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
 
   // ── Purgar IDs fantasmas conhecidos (removidos do SEED por duplicidade) ──────
   // ca1-ca17 foram registros com IDs de vagas reutilizados — causavam duplicatas
@@ -8005,13 +8246,13 @@ function renderDashboard(el){
   el.innerHTML=`
   <!-- TOPBAR -->
   <!-- Banner de backup (admin only) -->
-  ${isAdmin?`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+  ${_h(isAdmin, '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
     <span style="font-size:12px;color:#1d4ed8">💾 <strong>Seus dados ficam neste navegador.</strong> Faça backup regularmente para não perder informações.</span>
     <div style="display:flex;gap:8px">
       <button title="Exportar backup completo dos dados em JSON" onclick="exportarBackup()" style="font-size:11px;font-weight:600;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:5px 12px;cursor:pointer">⬇️ Exportar backup</button>
       <button onclick="importarBackup()" style="font-size:11px;font-weight:600;color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:5px 12px;cursor:pointer">⬆️ Importar backup</button>
     </div>
-  </div>`:''}
+  </div>')}
   <div class="tb" style="align-items:flex-end">
     <div><h1 class="pt">Dashboard</h1><p class="ps">Período: <strong>${periodoLabel}</strong></p></div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -8047,16 +8288,16 @@ function renderDashboard(el){
       <div class="sv" style="color:#16a34a">${aprovados}</div>
       <div class="ss">de ${cands.length} candidatos</div>
     </div>
-    ${S.user.role!=='recruiter'?`<div class="sc">
-      <div class="sl">Clientes cadastrados</div>
-      <div class="sv" style="color:#6d28d9">${totalClientes}</div>
-      <div class="ss" style="color:${clComVagaAberta>0?'#16a34a':'#94a3b8'}">${clComVagaAberta} com vaga aberta</div>
-    </div>`:
-    `<div class="sc">
-      <div class="sl">Minhas vagas abertas</div>
-      <div class="sv" style="color:#6d28d9">${jobs.filter(j=>j.status!=='Encerrada'&&j.status!=='Cancelada').length}</div>
-      <div class="ss">${jobs.length} vagas no total</div>
-    </div>`}
+    ${(function(){
+      if(S.user.role!=='recruiter'){
+        return '<div class="sc"><div class="sl">Clientes cadastrados</div>'
+          +'<div class="sv" style="color:#6d28d9">'+totalClientes+'</div>'
+          +'<div class="ss" style="color:'+(clComVagaAberta>0?'#16a34a':'#94a3b8')+'">'+clComVagaAberta+' com vaga aberta</div></div>';
+      }
+      return '<div class="sc"><div class="sl">Minhas vagas abertas</div>'
+        +'<div class="sv" style="color:#6d28d9">'+jobs.filter(j=>j.status!=='Encerrada'&&j.status!=='Cancelada').length+'</div>'
+        +'<div class="ss">'+jobs.length+' vagas no total</div></div>';
+    })()}
     <div class="sc">
       <div class="sl">${S.user.role==='recruiter'?'Candidatos cadastrados':'Recrutadoras ativas'}</div>
       <div class="sv" style="color:#1A4B8F">${S.user.role==='recruiter'?cands.length:recs.filter(r=>r.active).length}</div>
@@ -8081,7 +8322,7 @@ function renderDashboard(el){
       <div class="sv" style="color:#f59e0b">${vagasRep.length}</div>
       <div class="ss">${taxaRep}% do total · ${aprovRep.length} aprovado(s)</div>
     </div>
-    ${isAdmin?`
+    ${_h(isAdmin, '
     <div class="sc" style="border-top:3px solid #1A4B8F">
       <div class="sl">💰 Fat. ${periodoLabel}</div>
       <div class="sv" style="color:#1A4B8F;font-size:18px">${fmtV(fatDoPeriodo)}</div>
@@ -8091,7 +8332,7 @@ function renderDashboard(el){
       <div class="sl">💰 ${MONTHS_NM[hoje.getMonth()]}/${hoje.getFullYear()} · Ano ${hoje.getFullYear()}</div>
       <div class="sv" style="color:#E85D1E;font-size:16px">${fmtV(fatMesAtual)}</div>
       <div class="ss">acum. ano: ${fmtV(fatAnoAtual)}</div>
-    </div>`:''}
+    </div>')}
   </div>
 
   <!-- RANKING + ÚLTIMAS ADMISSÕES (supervisor only) -->
@@ -8115,18 +8356,53 @@ function renderDashboard(el){
         </div>
       </div>
       ${byRec.length===0?'<p style="color:#94a3b8;font-size:13px">Sem dados no período.</p>':''}
-      ${byRec.slice(0,8).map((r,i)=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <span style="font-family:'Inter',sans-serif;font-weight:800;color:${i<3?'#E85D1E':'#94a3b8'};width:22px">${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`}</span>
-        <div style="flex:1">
-          <div style="display:flex;justify-content:space-between;margin-bottom:3px">
-            <span style="font-size:13px;font-weight:500">${r.name}</span>
-            <span style="font-size:12px;color:#64748b">${r.aprov}✓/${r.sent}</span>
-          </div>
-          <div style="height:5px;background:#f1f5f9;border-radius:3px">
-            <div style="height:100%;border-radius:3px;background:${i===0?'#E85D1E':'#1A4B8F'};width:${Math.round((r.aprov/maxA)*100)}%"></div>
-          </div>
-        </div>
-      </div>`).join('')}
+      ${isAdmin
+        // Admin vê todos
+        ? byRec.slice(0,8).map((r,i)=>{
+          const med = i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.';
+          const cor = i<3?'#E85D1E':'#94a3b8';
+          const bg  = i===0?'#E85D1E':'#1A4B8F';
+          const pct = Math.round((r.aprov/maxA)*100);
+          return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+            +'<span style="font-family:\'Inter\',sans-serif;font-weight:800;color:'+cor+';width:22px">'+med+'</span>'
+            +'<div style="flex:1">'
+            +'<div style="display:flex;justify-content:space-between;margin-bottom:3px">'
+            +'<span style="font-size:13px;font-weight:500">'+r.name+'</span>'
+            +'<span style="font-size:12px;color:#64748b">'+r.aprov+'✓/'+r.sent+'</span>'
+            +'</div>'
+            +'<div style="height:5px;background:#f1f5f9;border-radius:3px">'
+            +'<div style="height:100%;border-radius:3px;background:'+bg+';width:'+pct+'%"></div>'
+            +'</div></div></div>';
+        }).join('')
+        // Não-admin: mostra posição própria + posições mascaradas
+        : (()=>{
+          const minhaPos = byRec.findIndex(r=>r.name===S.user.name);
+          return byRec.slice(0,8).map((r,i)=>{
+            const isMinha = r.name === S.user.name;
+            const medalha = i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.';
+            const meusDados = isMinha ? '<span style="font-size:12px;color:#64748b">'+r.aprov+'✓/'+r.sent+'</span>' : '';
+            const barW = isMinha ? Math.round((r.aprov/maxA)*100) : Math.round(Math.random()*60+20);
+            const barCor = isMinha ? '#E85D1E' : '#e2e8f0';
+            const nomeTxt = isMinha ? r.name+' (você)' : '— — —';
+            const nomeCor = isMinha ? '#E85D1E' : '#1e293b';
+            const nomePeso = isMinha ? '700' : '500';
+            const destaque = isMinha ? 'background:#fff7ed;border-radius:8px;padding:6px 8px;border:1.5px solid #fed7aa;margin:-2px -8px 10px;' : '';
+            return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;'+destaque+'">'
+              +'<span style="font-family:\'Inter\',sans-serif;font-weight:800;color:'+(i<3?'#E85D1E':'#94a3b8')+';width:22px">'+medalha+'</span>'
+              +'<div style="flex:1">'
+              +'<div style="display:flex;justify-content:space-between;margin-bottom:3px">'
+              +'<span style="font-size:13px;font-weight:'+nomePeso+';color:'+nomeCor+'">'+nomeTxt+'</span>'
+              +meusDados
+              +'</div>'
+              +'<div style="height:5px;background:#f1f5f9;border-radius:3px">'
+              +'<div style="height:100%;border-radius:3px;background:'+barCor+';width:'+barW+'%"></div>'
+              +'</div>'
+              +'</div>'
+              +'</div>';
+          }).join('')
+          + (minhaPos===-1?'<div style="font-size:12px;color:#94a3b8;text-align:center;margin-top:8px">Você ainda não tem aprovações no período.</div>':'');
+        })()
+      }
     </div>
 
     <!-- ÚLTIMAS ADMISSÕES -->
@@ -8156,8 +8432,8 @@ function renderDashboard(el){
     </div>
   </div>
 
-  <!-- PRODUTIVIDADE DETALHADA -->
-  <div class="card">
+  <!-- PRODUTIVIDADE DETALHADA — apenas admin -->
+  ${isAdmin ? `<div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
       <div style="font-family:'Inter',sans-serif;font-weight:700;font-size:15px">📈 Produtividade por recrutadora</div>
       <div style="display:flex;gap:6px;align-items:center">
@@ -8193,7 +8469,7 @@ function renderDashboard(el){
         </div>
       </div>`).join('')}
     </div>
-  </div>`:''}`;  
+  </div>` : ''}
 }
 
 // ═══ VAGAS ═══
@@ -8253,7 +8529,8 @@ function renderVagaCard(vaga){
       const cD = dA>30?'#dc2626':dA>15?'#f59e0b':'#16a34a';
       const cM = dM>14?'#dc2626':dM>7?'#f59e0b':'#16a34a';
       if(vaga.status!=='encerrada'&&vaga.status!=='cancelada'){
-        timerHtml = `<div style="display:flex;gap:8px;margin:6px 0;flex-wrap:wrap"><span style="background:${cD}11;color:${cD};border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700">📅 ${dA}d aberta</span>${dM>0?`<span style="background:${cM}11;color:${cM};border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700">⏱ ${dM}d sem mov.</span>`:''}</div>`;
+        const movSpan = dM>0 ? '<span style="background:'+cM+'11;color:'+cM+';border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700">⏱ '+dM+'d sem mov.</span>' : '';
+        timerHtml = '<div style="display:flex;gap:8px;margin:6px 0;flex-wrap:wrap"><span style="background:'+cD+'11;color:'+cD+';border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700">📅 '+dA+'d aberta</span>'+movSpan+'</div>';
       }
     } catch(e2){}
 
@@ -8261,28 +8538,28 @@ function renderVagaCard(vaga){
     div.className = 'jc' + (sel?' sel':'');
     div.dataset.jid = jid;
     div.onclick = function(){ selectJob(jid); };
-    div.innerHTML = `
-      <div class="jcm">${cl.name||'—'}</div>
-      <div class="jct">${vaga.title||'—'}</div>
-      <div class="jc-meta">
-        ${vaga.city?`<span class="jc-chip">📍 ${vaga.city}</span>`:''}
-        ${vaga.contract?`<span class="jc-chip">💼 ${vaga.contract}</span>`:''}
-        ${vaga.isRep?'<span class="tg tg-r">REP</span>':''}
-        ${vaga.isRep&&vaga.isGarantia?'<span style="background:#dcfce7;color:#166534;border-radius:6px;padding:1px 6px;font-size:9px;font-weight:700">🛡️</span>':''}
-        ${vaga.isPcd?'<span class="tg tg-p">PcD</span>':''}
-      </div>
-      <div class="jc-bar-wrap">
-        <div class="jc-bar-lbl"><span>Candidatos</span><span>${total} cadastrado${total!==1?'s':''} · ${aprov} aprovado${aprov!==1?'s':''}</span></div>
-        <div class="jc-bar"><div class="jc-bar-fill" style="width:${pct}%"></div></div>
-      </div>
-      ${timerHtml}
-      <div class="jc-footer">
-        <span class="jc-footer-recs">👤 ${recLabel}</span>
-        <div style="display:flex;gap:6px;align-items:center">
-          ${pill(vaga.status)}
-          <button class="jc-footer-btn" onclick="event.stopPropagation();selectJob('${jid}')">Ver briefing →</button>
-        </div>
-      </div>`;
+    const cityChip     = vaga.city     ? '<span class="jc-chip">📍 '+vaga.city+'</span>'    : '';
+    const contractChip = vaga.contract ? '<span class="jc-chip">💼 '+vaga.contract+'</span>' : '';
+    const repTag       = vaga.isRep    ? '<span class="tg tg-r">REP</span>' : '';
+    const garantiaTag  = vaga.isRep&&vaga.isGarantia ? '<span style="background:#dcfce7;color:#166534;border-radius:6px;padding:1px 6px;font-size:9px;font-weight:700">🛡️</span>' : '';
+    const pcdTag       = vaga.isPcd    ? '<span class="tg tg-p">PcD</span>' : '';
+    const totalTxt     = total+' cadastrado'+(total!==1?'s':'')+' · '+aprov+' aprovado'+(aprov!==1?'s':'');
+
+    div.innerHTML = '<div class="jcm">'+(cl.name||'—')+'</div>'
+      +'<div class="jct">'+(vaga.title||'—')+'</div>'
+      +'<div class="jc-meta">'+cityChip+contractChip+repTag+garantiaTag+pcdTag+'</div>'
+      +'<div class="jc-bar-wrap">'
+        +'<div class="jc-bar-lbl"><span>Candidatos</span><span>'+totalTxt+'</span></div>'
+        +'<div class="jc-bar"><div class="jc-bar-fill" style="width:'+pct+'%"></div></div>'
+      +'</div>'
+      +timerHtml
+      +'<div class="jc-footer">'
+        +'<span class="jc-footer-recs">👤 '+recLabel+'</span>'
+        +'<div style="display:flex;gap:6px;align-items:center">'
+          +pill(vaga.status)
+          +'<button class="jc-footer-btn" onclick="event.stopPropagation();selectJob(\''+jid+'\')">Ver briefing →</button>'
+        +'</div>'
+      +'</div>';
     return div.outerHTML;
   } catch(err) {
     console.error('renderVagaCard erro:', vaga?.id, err.message);
@@ -8547,11 +8824,13 @@ function _briefingBlock(j){
     : '';
 
   return '<div class="dp-sec" style="border-color:#ddd6fe;padding:12px 14px 6px">'
-    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">'
     +'<div style="font-size:13px;font-weight:700;color:#7c3aed;display:flex;align-items:center;gap:8px">✦ Briefing da vaga'+geradoBadge+'</div>'
-    +'<div style="display:flex;gap:6px;align-items:center">'
+    +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
     +'<div id="brief-loading-'+j.id+'" style="display:none;font-size:11px;color:#7c3aed;align-items:center;gap:5px">'
     +'<div style="width:12px;height:12px;border:2px solid #ede9fe;border-top-color:#7c3aed;border-radius:50%;animation:spin .8s linear infinite;display:inline-block"></div> Gerando...</div>'
+    +'<button data-jid="'+j.id+'" onclick="exportarVagaPDF(this.dataset.jid)"'
+    +' style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer" title="Gerar PDF formatado para divulgação no Pandapé e outros sites">📄 Exportar vaga PDF</button>'
     +'<button data-jid="'+j.id+'" onclick="gerarBriefingIA(this.dataset.jid)"'
     +' style="background:#ede9fe;color:#7c3aed;border:1px solid #ddd6fe;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">🔄 Regerar</button>'
     +'</div>'
@@ -8559,6 +8838,116 @@ function _briefingBlock(j){
     +secDescricao+secPerfis+secCriterios+secOperacional+secPerguntas+secWhatsapp
     +notasBlock
     +'</div>';
+}
+
+function exportarVagaPDF(jid){
+  const j = S.jobs.find(x=>x.id===jid); if(!j) return;
+  const cl = getClient(j.cid);
+
+  // Montar conteúdo da vaga
+  const titulo   = j.title||'Vaga';
+  const empresa  = S.user.role==='admin' ? (cl.name||j.company||'') : (j.city||'');
+  const cidade   = j.city||'';
+  const salario  = j.salary||'A combinar';
+  const contrato = j.contract||'CLT';
+  const vagas    = j.vagas||1;
+  const descricao  = j.description||j.briefDescricao||'';
+  const requisitos = j.requirements||'';
+  const briefDesc  = j.briefDescricao||'';
+  const briefPerf  = j.briefPerfis||'';
+  const briefCrit  = j.briefCriterios||'';
+  const briefOper  = j.briefOperacional||'';
+
+  const hoje = new Date();
+  const dataFmt = pad(hoje.getDate())+'/'+pad(hoje.getMonth()+1)+'/'+hoje.getFullYear();
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>${titulo} — RHF Talentos</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',sans-serif;color:#1e293b;background:#fff;padding:40px;max-width:800px;margin:0 auto}
+  .header{background:linear-gradient(135deg,#1A4B8F,#E85D1E);color:#fff;border-radius:14px;padding:28px 32px;margin-bottom:28px}
+  .header h1{font-size:26px;font-weight:800;margin-bottom:6px}
+  .header .sub{font-size:14px;opacity:.85;display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+  .header .sub span{background:rgba(255,255,255,.18);border-radius:20px;padding:3px 12px;font-weight:600;font-size:13px}
+  .logo{font-size:13px;font-weight:700;opacity:.7;margin-bottom:6px;letter-spacing:.05em;text-transform:uppercase}
+  .sec{margin-bottom:22px}
+  .sec-title{font-size:13px;font-weight:700;color:#1A4B8F;text-transform:uppercase;letter-spacing:.06em;border-left:4px solid #E85D1E;padding-left:10px;margin-bottom:10px}
+  .sec-body{font-size:13px;line-height:1.8;color:#334155;white-space:pre-wrap}
+  .pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+  .pill{background:#eff6ff;color:#1e40af;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600}
+  .pill.green{background:#f0fdf4;color:#166534}
+  .pill.orange{background:#fff7ed;color:#c2410c}
+  .footer{margin-top:32px;padding-top:16px;border-top:2px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#94a3b8}
+  .footer strong{color:#1A4B8F}
+  hr{border:none;border-top:1.5px solid #e2e8f0;margin:20px 0}
+  @media print{body{padding:20px}.header{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">RHF Talentos — Divulgação de Vaga</div>
+    <h1>${titulo}</h1>
+    ${empresa??'<div style="font-size:14px;opacity:.9;margin-top:4px">${empresa}</div>':''}
+    <div class="sub">
+      <span>📍 ${cidade}</span>
+      <span>💼 ${contrato}</span>
+      <span>💰 ${salario}</span>
+      <span>👥 ${vagas} vaga${vagas>1?'s':''}</span>
+      ${j.isPcd?'<span>♿ PCD</span>':''}
+    </div>
+  </div>
+
+  ${descricao||briefDesc ? `
+  <div class="sec">
+    <div class="sec-title">📋 Descrição das Atividades</div>
+    <div class="sec-body">${descricao||briefDesc}</div>
+  </div>` : ''}
+
+  ${requisitos ? `
+  <div class="sec">
+    <div class="sec-title">✅ Requisitos</div>
+    <div class="sec-body">${requisitos}</div>
+  </div>` : ''}
+
+  ${briefPerf ? `
+  <div class="sec">
+    <div class="sec-title">🎯 Perfil Desejado</div>
+    <div class="sec-body">${briefPerf}</div>
+  </div>` : ''}
+
+  ${briefOper ? `
+  <div class="sec">
+    <div class="sec-title">⚙️ Informações Adicionais</div>
+    <div class="sec-body">${briefOper}</div>
+  </div>` : ''}
+
+  ${j.persona ? `
+  <div class="sec">
+    <div class="sec-title">👤 Persona / Perfil Ideal</div>
+    <div class="sec-body">${j.persona}</div>
+  </div>` : ''}
+
+  <hr>
+  <div class="footer">
+    <div>Gerado em ${dataFmt} · <strong>RHF Talentos</strong> — Piçarras/SC</div>
+    <div>Para se candidatar, entre em contato com nossa equipe.</div>
+  </div>
+</body>
+</html>`;
+
+  // Abrir em nova aba e disparar impressão/salvar como PDF
+  const win = window.open('','_blank','width=900,height=700');
+  if(!win){ notify('⚠️ Permita popups para gerar o PDF','e'); return; }
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>{ win.print(); }, 800);
+  notify('📄 PDF da vaga aberto! Use Ctrl+P → "Salvar como PDF" para baixar.');
 }
 
 async function gerarBriefingIA(jid){
@@ -8879,8 +9268,8 @@ function buildJobDetail(job,isAdmin){
       +'</div>'
     :'')
 
-    // Documento de perfil
-    +(j.profileDocName?
+    // Documento de perfil — apenas admin e CLT
+    +(j.profileDocName && S.user.role !== 'recruiter' ?
       '<div style="font-size:12px;color:#64748b;margin-bottom:14px">📎 Levantamento: <a href="#" style="color:var(--bl);font-weight:600">'+j.profileDocName+'</a></div>'
     :'')
 
@@ -8985,7 +9374,7 @@ function renderCandidatos(el){
   <div class="tb">
     <div><h1 class="pt">Candidatos</h1><p class="ps">${filtered.length} exibidos · ${aprov} aprovados · ${repr} reprovados · ${desist} desistentes</p></div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      ${PERMS.isSupervisor(S.user.role)?`
+      ${_h(PERMS.isSupervisor(S.user.role), '
         <button class="btn bsm" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer"
           onclick="exportarExcel()">⬇️ Exportar Excel</button>
         <button class="btn bsm" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer"
@@ -8994,7 +9383,7 @@ function renderCandidatos(el){
           ⬆️ Importar Excel
           <input type="file" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(this)">
         </label>
-      `:''}
+      ')}
       ${(S.user.role!=="comercial")?'<button class="btn bp bsm" onclick="openAddCand()">+ Novo candidato</button>':''}
       ${S.user.role==='admin'?'<button class="btn bsm" style="background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe" onclick="importarCandidatosPublicos()">📥 Cadastros públicos</button>':''}
       ${(isMaster()||PERMS.isSupervisor(S.user.role))?'<button class="btn bsm" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer" onclick="removerDuplicatasCandidatos()" title="Detectar e remover candidatos duplicados (mesmo nome + mesma vaga)">🧹 Remover duplicatas</button>':''}
@@ -9038,17 +9427,19 @@ function renderPainel(el){
     if(S.jobFilter&&!j.title.toLowerCase().includes(S.jobFilter.toLowerCase()))return false;
     return true;
   });
+  // Usar apenas vagas filtradas para os totais (não vazar dados de outras recrutadoras)
+  const jobsRef = jobsPainel;
   el.innerHTML=`
   <div class="tb"><h1 class="pt">Painel Geral</h1></div>
   <!-- Vagas fechadas em destaque no topo -->
-  ${(()=>{ const nF=S.jobs.filter(j=>j.status==='encerrada'||j.status==='fechada').length; return nF>0?'<div style="background:linear-gradient(135deg,#ecfdf5,#f0fdf4);border:1.5px solid #86efac;border-radius:10px;padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px"><div style="font-size:32px;font-weight:800;color:#166534">'+nF+'</div><div><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#16a34a">Vagas fechadas (encerradas)</div><div style="font-size:11px;color:#64748b">Total acumulado de processos concluídos</div></div><div style="margin-left:auto;font-size:11px;color:#94a3b8">De '+S.jobs.length+' totais · '+( S.jobs.length?Math.round(nF/S.jobs.length*100):0)+'% fechadas</div></div>':''; })()}
+  ${(()=>{ const nF=jobsRef.filter(j=>j.status==='encerrada'||j.status==='fechada').length; return nF>0?'<div style="background:linear-gradient(135deg,#ecfdf5,#f0fdf4);border:1.5px solid #86efac;border-radius:10px;padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px"><div style="font-size:32px;font-weight:800;color:#166534">'+nF+'</div><div><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#16a34a">Vagas fechadas (encerradas)</div><div style="font-size:11px;color:#64748b">Total acumulado de processos concluídos</div></div><div style="margin-left:auto;font-size:11px;color:#94a3b8">De '+jobsRef.length+' totais · '+(jobsRef.length?Math.round(nF/jobsRef.length*100):0)+'% fechadas</div></div>':''; })()}
   <div class="g4" style="margin-bottom:18px">
     ${[
-      ['Total de vagas',S.jobs.length,'#475569'],
-      ['Abertas',S.jobs.filter(j=>j.status==='aberta').length,'#16a34a'],
-      ['Encerradas/Fechadas',S.jobs.filter(j=>j.status==='encerrada'||j.status==='fechada').length,'#166534'],
-      ['Congeladas',S.jobs.filter(j=>j.status==='congelada').length,'#1A4B8F'],
-      ['Suspensas',S.jobs.filter(j=>j.status==='suspensa').length,'#dc2626'],
+      ['Total de vagas',jobsRef.length,'#475569'],
+      ['Abertas',jobsRef.filter(j=>j.status==='aberta').length,'#16a34a'],
+      ['Encerradas/Fechadas',jobsRef.filter(j=>j.status==='encerrada'||j.status==='fechada').length,'#166534'],
+      ['Congeladas',jobsRef.filter(j=>j.status==='congelada').length,'#1A4B8F'],
+      ['Suspensas',jobsRef.filter(j=>j.status==='suspensa').length,'#dc2626'],
     ].map(([l,v,c])=>`<div class="sc"><div class="sl">${l}</div><div class="sv" style="color:${c}">${v}</div></div>`).join('')}
   </div>
   <div class="fl">
@@ -9057,10 +9448,10 @@ function renderPainel(el){
       <option value="">Todos status</option>
       ${[['briefing','Briefing'],['alinhamento','Em alinhamento'],['divulgacao','Divulgação'],['triagem','Triagem'],['entrevista','Entrevistas'],['envio_parecer','Env. Parecer'],['aguardando_cliente','Aguardando cliente'],['entrevista_final','Entrev. final'],['aberta','Aberta'],['reposicao','Reposição'],['congelada','Congelada'],['encerrada','Encerrada'],['cancelada','Cancelada']].map(([s,l])=>`<option value="${s}" ${S.statusFilter===s?'selected':''}>${l}</option>`).join('')}
     </select>
-    <select onchange="S.recFilter=this.value;renderPainel(document.getElementById('pg-painel'))">
+    ${S.user.role==='admin'?`<select onchange="S.recFilter=this.value;renderPainel(document.getElementById('pg-painel'))">
       <option value="">Todos rec.</option>
       ${S.recruiters.map(r=>`<option value="${r.name}" ${S.recFilter===r.name?'selected':''}>${r.name}</option>`).join('')}
-    </select>
+    </select>`:''}
   </div>
   <div class="tw"><table>
     <thead><tr><th>UF</th><th>Cidade</th><th>Cargo</th><th>Empresa</th><th>Abertura</th><th>Qtd</th><th>Rec. CLT</th><th>Rec. PJ</th><th>Enviados</th><th>Aprovados</th><th>Status</th></tr></thead>
@@ -9141,16 +9532,24 @@ function renderRecrutadoras(el){
   const role    = S.user.role;
   const isAdmin = role==='admin';
   const isSup   = PERMS.isSupervisor(role);
-  // PJ: redireciona para ver apenas seus próprios dados
-  if(role==='recruiter'){
-    const rec=S.recruiters.find(r=>r.name===S.user.name);
-    if(rec){S.selRec=rec.id;}
+
+  // Não-admin: ver apenas seus próprios dados e selecionar automaticamente
+  const minhaRec = S.recruiters.find(r=>r.name===S.user.name);
+  if(!isAdmin && minhaRec){
+    S.selRec = minhaRec.id;
   }
+
   const fM = S.recFiltMes||'';
   const fA = S.recFiltAno||'';
   const MONTHS_NM=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  // Filtrar lista de recrutadoras — não-admin vê apenas a si mesma
+  const recsVisiveis = isAdmin
+    ? S.recruiters
+    : (minhaRec ? [minhaRec] : []);
+
   el.innerHTML=`
-  <div class="tb"><div><h1 class="pt">Recrutadoras</h1></div>
+  <div class="tb"><div><h1 class="pt">Recrutadoras</h1>${!isAdmin&&minhaRec??'<p class="ps">Exibindo seus dados — ${minhaRec.name}</p>':''}</div>
     <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
       ${isSup?`
       <div>
@@ -9169,22 +9568,30 @@ function renderRecrutadoras(el){
           ${['2024','2025','2026','2027'].map(a=>`<option value="${a}" ${fA===a?'selected':''}>${a}</option>`).join('')}
         </select>
       </div>`:''}
-      <!-- Filtro ativo/inativo -->
+      ${_h(isAdmin, '
       <div>
         <div style="font-size:11px;color:#94a3b8;margin-bottom:3px">Exibir</div>
         <select style="border:1.5px solid #e2e8f0;border-radius:7px;padding:6px 10px;font-size:12px;outline:none"
-          onchange="S.recFiltAtivo=this.value;renderRecrutadoras(document.getElementById('pg-recrutadoras'))">
-          <option value="ativas" ${(S.recFiltAtivo||'ativas')==='ativas'?'selected':''}>Só ativas</option>
-          <option value="pausadas" ${S.recFiltAtivo==='pausadas'?'selected':''}>Só pausadas</option>
-          <option value="todas" ${S.recFiltAtivo==='todas'?'selected':''}>Todas</option>
+          onchange="S.recFiltAtivo=this.value;renderRecrutadoras(document.getElementById(\'pg-recrutadoras\'))">
+          <option value="ativas" ${(S.recFiltAtivo||\'ativas\')===\'ativas\'?\'selected\':\'\'}>Só ativas</option>
+          <option value="pausadas" ${S.recFiltAtivo===\'pausadas\'?\'selected\':\'\'}>Só pausadas</option>
+          <option value="todas" ${S.recFiltAtivo===\'todas\'?\'selected\':\'\'}>Todas</option>
         </select>
       </div>
-      ${isSup?`<button class="btn bg bsm" onclick="S.recFiltMes='';S.recFiltAno='';renderRecrutadoras(document.getElementById('pg-recrutadoras'))">Limpar</button>`:''}
-      ${PERMS.canEditRecrutadoras(role)?'<button class="btn bp bsm" onclick="openAddRec()">+ Adicionar</button>':''}
+      <button class="btn bg bsm" onclick="S.recFiltMes=\'\';S.recFiltAno=\'\';renderRecrutadoras(document.getElementById(\'pg-recrutadoras\'))">Limpar</button>
+      <button class="btn bp bsm" onclick="openAddRec()">+ Adicionar</button>')}
     </div>
   </div>
   <div class="g3" style="margin-bottom:20px">
-    ${S.recruiters.filter(rec=>{
+    ${recsVisiveis.length === 0 ? `
+      <div style="grid-column:1/-1;background:#fff7ed;border:1.5px solid #fed7aa;border-radius:12px;padding:20px 24px;text-align:center">
+        <div style="font-size:32px;margin-bottom:8px">⚠️</div>
+        <div style="font-weight:700;color:#92400e;margin-bottom:6px">Nenhuma recrutadora vinculada</div>
+        <div style="font-size:13px;color:#b45309">Seu usuário não está vinculado a nenhuma recrutadora cadastrada.<br>
+        Peça para a administradora editar seu usuário e vincular ao seu cadastro.</div>
+      </div>` :
+    recsVisiveis.filter(rec=>{
+      if(!isAdmin) return true; // não-admin já está filtrado
       const fa = S.recFiltAtivo||'ativas';
       if(fa==='ativas') return rec.active!==false;
       if(fa==='pausadas') return rec.active===false;
@@ -9199,8 +9606,8 @@ function renderRecrutadoras(el){
               ${rec.active===false?'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#fef9c3;color:#92400e">⏸ Pausada</span>':''}
             </div>
             <span class="pill ${rec.type==='CLT'?'p-entrevista':'p-Aguardando'}" style="margin-top:3px">${rec.type}${rec.type==='PJ'?' · '+rec.rate.toFixed(0)+'%':''}</span>
-            ${rec.contratoNome?`<div style="font-size:11px;color:#1A4B8F;margin-top:4px;display:flex;align-items:center;gap:4px">📄 <span style="font-weight:600">${rec.contratoNome}</span></div>`:''}
-            ${rec.phone?`<div style="font-size:11px;color:#64748b;margin-top:2px">📱 ${rec.phone}</div>`:''}
+            ${rec.contratoNome??'<div style="font-size:11px;color:#1A4B8F;margin-top:4px;display:flex;align-items:center;gap:4px">📄 <span style="font-weight:600">${rec.contratoNome}</span></div>':''}
+            ${rec.phone??'<div style="font-size:11px;color:#64748b;margin-top:2px">📱 ${rec.phone}</div>':''}
             ${(()=>{
               const vagasAtivas = S.jobs.filter(j=>j.status==='aberta'||j.status==='triagem'||j.status==='entrevista');
               const comoClt = vagasAtivas.filter(j=>j.recClt===rec.name||j.rec===rec.name).length;
@@ -9214,16 +9621,16 @@ function renderRecrutadoras(el){
                 +'</span>';
             })()}
           </div>
-          ${PERMS.canEditRecrutadoras(role)?`<div style="display:flex;gap:4px;flex-wrap:wrap" onclick="event.stopPropagation()">
-            <button class="btn bg bxs" title="Editar" onclick="openEditRec('${rec.id}')">✏️</button>
-            <button class="btn bxs" title="Agenda" onclick="abrirAgendaIntegrada('${rec.id}')" style="background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe">📅</button>
-            <button class="btn bxs" style="${rec.active===false?'background:#dcfce7;color:#166534;border:1px solid #bbf7d0':'background:#fef9c3;color:#854d0e;border:1px solid #fde68a'}"
-              title="${rec.active===false?'Ativar':'Pausar'}"
-              onclick="togglePausarRec('${rec.id}')">
-              ${rec.active===false?'▶ Ativar':'⏸ Pausar'}
+          ${_h(PERMS.canEditRecrutadoras(role), '<div style="display:flex;gap:4px;flex-wrap:wrap" onclick="event.stopPropagation()">
+            <button class="btn bg bxs" title="Editar" onclick="openEditRec(\'${rec.id}\')">✏️</button>
+            <button class="btn bxs" title="Agenda" onclick="abrirAgendaIntegrada(\'${rec.id}\')" style="background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe">📅</button>
+            <button class="btn bxs" style="${rec.active===false?\'background:#dcfce7;color:#166534;border:1px solid #bbf7d0\':\'background:#fef9c3;color:#854d0e;border:1px solid #fde68a\'}"
+              title="${rec.active===false?\'Ativar\':\'Pausar\'}"
+              onclick="togglePausarRec(\'${rec.id}\')">
+              ${rec.active===false?\'▶ Ativar\':\'⏸ Pausar\'}
             </button>
-            <button class="btn bd_ bxs" title="Excluir" onclick="deleteRec('${rec.id}')">🗑</button>
-          </div>`:''}
+            <button class="btn bd_ bxs" title="Excluir" onclick="deleteRec(\'${rec.id}\')">🗑</button>
+          </div>')}
         </div>
         <div class="rm">
           ${isSup?[
@@ -9247,7 +9654,7 @@ function renderRecrutadoras(el){
     return`<div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
         <div><h2 style="font-size:17px;margin-bottom:3px">${rec.name}</h2><p style="color:#64748b;font-size:13px">Prêmios por fechamento e performance</p></div>
-        ${isAdmin?`<button class="btn bs bsm" onclick="openAddPrize('${rec.id}')">+ Prêmio</button>`:''} 
+        ${isAdmin??'<button class="btn bs bsm" onclick="openAddPrize(\'${rec.id}\')">+ Prêmio</button>':''} 
       </div>
       <div style="font-weight:700;font-size:13px;margin-bottom:10px">Prêmios por fechamento</div>
       ${m.prizes.length===0?'<p style="color:#94a3b8;font-size:13px;margin-bottom:14px">Nenhum prêmio registrado.</p>':''}
@@ -9262,9 +9669,9 @@ function renderRecrutadoras(el){
         <div>
           <div style="font-size:13px;font-weight:500">${p.description||'Prêmio por fechamento'}</div>
           <div style="display:flex;gap:10px;margin-top:2px;flex-wrap:wrap">
-            ${admDate?`<span style="font-size:11px;color:#1A4B8F;font-weight:600">ADM: ${admDate}</span>`:''}
+            ${admDate??'<span style="font-size:11px;color:#1A4B8F;font-weight:600">ADM: ${admDate}</span>':''}
             <span style="font-size:11px;color:#94a3b8">Registrado: ${p.date}</span>
-            ${p.paidDate?`<span style="font-size:11px;color:#16a34a">Pago em: ${p.paidDate}</span>`:''}
+            ${p.paidDate??'<span style="font-size:11px;color:#16a34a">Pago em: ${p.paidDate}</span>':''}
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
@@ -9272,31 +9679,31 @@ function renderRecrutadoras(el){
           ${p.paid
             ? `<div style="display:flex;align-items:center;gap:6px">
                 <span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;background:#dcfce7;color:#166534">✓ Pago ${p.paidDate?'em '+p.paidDate:''}</span>
-                ${isAdmin?`<button onclick="revertPrizePaid('${p.id}')" style="background:none;border:1px solid #e2e8f0;border-radius:6px;font-size:11px;color:#94a3b8;cursor:pointer;padding:2px 8px" title="Reverter para pendente">↩</button>`:''}
+                ${_h(isAdmin, '<button onclick="revertPrizePaid(\'${p.id}\')" style="background:none;border:1px solid #e2e8f0;border-radius:6px;font-size:11px;color:#94a3b8;cursor:pointer;padding:2px 8px" title="Reverter para pendente">↩</button>')}
                </div>`
             : `<div style="display:flex;align-items:center;gap:6px">
                 <span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;background:#fef9c3;color:#854d0e">⏳ Pendente</span>
-                ${isAdmin?`<button onclick="openMarcarPagoPrize('${p.id}')" style="background:#dcfce7;color:#166534;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;padding:3px 10px">Marcar pago</button>`:''}
+                ${_h(isAdmin, '<button onclick="openMarcarPagoPrize(\'${p.id}\')" style="background:#dcfce7;color:#166534;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;padding:3px 10px">Marcar pago</button>')}
                </div>`
           }
         </div>
       </div>`;
       }).join('')}
-      ${m.prizes.length>0?`<div style="display:flex;gap:20px;justify-content:flex-end;padding-top:10px;border-top:1px solid #e2e8f0;font-size:13px">
-        <span>Total (manuais): <strong>R$ ${m.earned.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></span>
-        <span style="color:#16a34a">Pago: <strong>R$ ${m.paid.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></span>
-        <span style="color:${m.pending>0?'#dc2626':'#94a3b8'}">Pendente: <strong>R$ ${m.pending.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></span>
-      </div>`:''}
-      ${isSup&&m.autoEarned>0?`
+      ${_h(m.prizes.length>0, '<div style="display:flex;gap:20px;justify-content:flex-end;padding-top:10px;border-top:1px solid #e2e8f0;font-size:13px">
+        <span>Total (manuais): <strong>R$ ${m.earned.toLocaleString(\'pt-BR\',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></span>
+        <span style="color:#16a34a">Pago: <strong>R$ ${m.paid.toLocaleString(\'pt-BR\',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></span>
+        <span style="color:${m.pending>0?\'#dc2626\':\'#94a3b8\'}">Pendente: <strong>R$ ${m.pending.toLocaleString(\'pt-BR\',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></span>
+      </div>')}
+      ${_h(isSup&&m.autoEarned>0, '
       <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 14px;margin-top:12px">
-        <div style="font-size:12px;font-weight:600;color:#166534;margin-bottom:8px">💰 Somatória por fechamentos — ${fM!==''?MONTHS_NM[Number(fM)]+'/'+fA:fA||'todo o período'}</div>
+        <div style="font-size:12px;font-weight:600;color:#166534;margin-bottom:8px">💰 Somatória por fechamentos — ${fM!==\'\'?MONTHS_NM[Number(fM)]+\'/\'+fA:fA||\'todo o período\'}</div>
         <div style="display:flex;gap:20px;font-size:13px">
-          <span>Total gerado: <strong>R$ ${m.autoEarned.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></span>
-          <span style="color:#16a34a">Pago: <strong>R$ ${m.autoPaid.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></span>
-          <span style="color:${m.autoPending>0?'#dc2626':'#94a3b8'}">Pendente: <strong>R$ ${m.autoPending.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></span>
+          <span>Total gerado: <strong>R$ ${m.autoEarned.toLocaleString(\'pt-BR\',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></span>
+          <span style="color:#16a34a">Pago: <strong>R$ ${m.autoPaid.toLocaleString(\'pt-BR\',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></span>
+          <span style="color:${m.autoPending>0?\'#dc2626\':\'#94a3b8\'}">Pendente: <strong>R$ ${m.autoPending.toLocaleString(\'pt-BR\',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></span>
         </div>
         <div style="font-size:11px;color:#166534;margin-top:4px">Calculado: Salário × % prêmio por cada fechamento no período</div>
-      </div>`:''}
+      </div>')}
       <div style="font-weight:700;font-size:13px;margin:16px 0 10px">Aprovados recentes</div>
       ${S.candidates.filter(c=>c.rec===rec.name&&c.result==='APROVADO').slice(0,8).map(c=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f8fafc;font-size:13px">
         <span style="font-weight:500">${c.name}</span><span style="color:#64748b">${c.company} · ADM ${c.adm||'—'}</span>
@@ -9467,7 +9874,7 @@ function _candRows(filtered){
     return`<tr>
       <td style="max-width:150px">
         <div style="font-weight:600;font-size:12px;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div>
-        ${c.phone?`<a href="tel:${c.phone}" style="color:#64748b;text-decoration:none;font-size:11px">📱 ${c.phone}</a>`:''}
+        ${c.phone??'<a href="tel:${c.phone}" style="color:#64748b;text-decoration:none;font-size:11px">📱 ${c.phone}</a>':''}
       </td>
       <td style="font-size:11px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
         <div style="font-weight:500;color:#1e293b">${job.title!=='—'?job.title:c.company}</div>
@@ -9766,52 +10173,52 @@ function renderFinBody(ft){
         <button class="btn bg bsm" onclick="S.finMes='';S.finAno='';S.finDe='';S.finAte='';S.finRecFilter='';S.finClFilter='';renderFinanceiro(document.getElementById('pg-financeiro'))">Limpar filtros</button>
       </div>
       <!-- Filtros adicionais -->
-      ${isAdmin?`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid #f1f5f9">
+      ${_h(isAdmin, '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid #f1f5f9">
         <div>
           <div style="font-size:11px;color:#94a3b8;margin-bottom:4px">Recrutadora</div>
           <select style="border:1.5px solid #e2e8f0;border-radius:7px;padding:6px 10px;font-size:12px;outline:none"
-            onchange="S.finRecFilter=this.value;renderFinanceiro(document.getElementById('pg-financeiro'))">
+            onchange="S.finRecFilter=this.value;renderFinanceiro(document.getElementById(\'pg-financeiro\'))">
             <option value="">Todas</option>
-            ${S.recruiters.filter(r=>r.active).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(r=>'<option value="'+r.name+'" '+(S.finRecFilter===r.name?'selected':'')+'>'+r.name+'</option>').join('')}
+            ${S.recruiters.filter(r=>r.active).sort((a,b)=>(a.name||\'\').localeCompare(b.name||\'\')).map(r=>\'<option value="\'+r.name+\'" \'+(S.finRecFilter===r.name?\'selected\':\'\')+\'>\'+r.name+\'</option>\').join(\'\')}
           </select>
         </div>
         <div>
           <div style="font-size:11px;color:#94a3b8;margin-bottom:4px">Cliente</div>
           <select style="border:1.5px solid #e2e8f0;border-radius:7px;padding:6px 10px;font-size:12px;outline:none"
-            onchange="S.finClFilter=this.value;renderFinanceiro(document.getElementById('pg-financeiro'))">
+            onchange="S.finClFilter=this.value;renderFinanceiro(document.getElementById(\'pg-financeiro\'))">
             <option value="">Todos</option>
-            ${S.clients.sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(cl=>'<option value="'+cl.id+'" '+(S.finClFilter===cl.id?'selected':'')+'>'+cl.name+'</option>').join('')}
+            ${S.clients.sort((a,b)=>(a.name||\'\').localeCompare(b.name||\'\')).map(cl=>\'<option value="\'+cl.id+\'" \'+(S.finClFilter===cl.id?\'selected\':\'\')+\'>\'+cl.name+\'</option>\').join(\'\')}
           </select>
         </div>
         <button onclick="gerarRelatorioFinanceiroXLS()" style="background:#166534;color:#fff;border:none;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;align-self:flex-end">📊 Excel</button>
         <button onclick="gerarRelatorioFinanceiroPDF()" style="background:#dc2626;color:#fff;border:none;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;align-self:flex-end">📄 PDF</button>
-      </div>`:''}
+      </div>')}
     </div>
 
     <!-- CARDS TOTALIZADORES (admin only) -->
-    ${isAdmin?`
+    ${_h(isAdmin, '
     <div class="g4" style="margin-bottom:16px">
       <div class="sc" style="border-top:3px solid #E85D1E">
         <div class="sl">Total a faturar</div>
-        <div class="sv" style="color:#E85D1E">R$ ${totalFat.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-        <div class="ss">${linhasCobravel.length} admissão(ões) cobráveis${linhas.filter(r=>r.status==='Substituição').length>0?' · '+linhas.filter(r=>r.status==='Substituição').length+' subst.':''}</div>
+        <div class="sv" style="color:#E85D1E">R$ ${totalFat.toLocaleString(\'pt-BR\',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        <div class="ss">${linhasCobravel.length} admissão(ões) cobráveis${linhas.filter(r=>r.status===\'Substituição\').length>0?\' · \'+linhas.filter(r=>r.status===\'Substituição\').length+\' subst.\':\'\'}</div>
       </div>
       <div class="sc" style="border-top:3px solid #16a34a">
         <div class="sl">Recebido</div>
-        <div class="sv" style="color:#16a34a">R$ ${totalPago.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-        <div class="ss">${linhas.filter(r=>r.status==='Pago').length} pago(s)</div>
+        <div class="sv" style="color:#16a34a">R$ ${totalPago.toLocaleString(\'pt-BR\',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        <div class="ss">${linhas.filter(r=>r.status===\'Pago\').length} pago(s)</div>
       </div>
       <div class="sc" style="border-top:3px solid #f59e0b">
         <div class="sl">Pendente</div>
-        <div class="sv" style="color:#f59e0b">R$ ${totalPend.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-        <div class="ss">${linhas.filter(r=>r.status==='Pendente').length} pendente(s)</div>
+        <div class="sv" style="color:#f59e0b">R$ ${totalPend.toLocaleString(\'pt-BR\',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        <div class="ss">${linhas.filter(r=>r.status===\'Pendente\').length} pendente(s)</div>
       </div>
       <div class="sc" style="border-top:3px solid #dc2626">
         <div class="sl">Inadimplente</div>
-        <div class="sv" style="color:#dc2626">R$ ${totalInad.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-        <div class="ss">${linhas.filter(r=>r.status==='Inadimplente').length} cliente(s)</div>
+        <div class="sv" style="color:#dc2626">R$ ${totalInad.toLocaleString(\'pt-BR\',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        <div class="ss">${linhas.filter(r=>r.status===\'Inadimplente\').length} cliente(s)</div>
       </div>
-    </div>`:''}
+    </div>')}
 
     <!-- TABELA PRINCIPAL -->
     <div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px">
@@ -9825,7 +10232,7 @@ function renderFinBody(ft){
         <th style="padding:10px 12px;font-size:11px;font-weight:600;color:#64748b;text-align:center;border-bottom:2px solid #e2e8f0;white-space:nowrap">Status pgto</th>
       </tr></thead>
       <tbody>
-        ${todasLinhas.length===0?`<tr><td colspan="${isAdmin?6:5}" style="text-align:center;padding:24px;color:#94a3b8;font-size:13px">Nenhuma admissão no período selecionado.</td></tr>`:''}
+        ${todasLinhas.length===0??'<tr><td colspan="${isAdmin?6:5}" style="text-align:center;padding:24px;color:#94a3b8;font-size:13px">Nenhuma admissão no período selecionado.</td></tr>':''}
         ${todasLinhas.map(({c,job,cl,fatDate,refDate,valor,status})=>{
           // Calcular status automático baseado na data
           const hoje3 = new Date(); hoje3.setHours(0,0,0,0);
@@ -9865,15 +10272,15 @@ function renderFinBody(ft){
               ${c.fatDateManual||fatDate}
               ${c.fatDateManual&&c.fatDateManual!==fatDate?'<span style="font-size:10px;color:#f59e0b;margin-left:4px" title="Data alterada manualmente">✏️</span>':''}
             </td>
-            ${isAdmin?`<td style="padding:10px 12px;font-weight:700;font-size:13px;text-align:right;white-space:nowrap">${valor?'R$ '+valor.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</td>`:''}
+            ${isAdmin??'<td style="padding:10px 12px;font-weight:700;font-size:13px;text-align:right;white-space:nowrap">${valor?\'R$ \'+valor.toLocaleString(\'pt-BR\',{minimumFractionDigits:2,maximumFractionDigits:2}):\'—\'}</td>':''}
             <td style="padding:10px 12px;text-align:center">${statusBtn}</td>
             <td style="padding:10px 12px">
               <button data-cid="${c.id}" onclick="editarDataFinanceiro(this.dataset.cid)"
                 style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;white-space:nowrap"
                 title="Editar datas">📅 Datas</button>
-              ${isMaster()?`<button data-cid="${c.id}" onclick="if(confirm('Excluir este registro de faturamento? (${c.name})')){S.candidates=S.candidates.filter(x=>x.id!=='${c.id}');save('candidates');renderFinanceiro(document.getElementById('pg-financeiro'));notify('✅ Registro excluído');}"
+              ${_h(isMaster(), '<button data-cid="${c.id}" onclick="if(confirm(\'Excluir este registro de faturamento? (${c.name})\')){S.candidates=S.candidates.filter(x=>x.id!==\'${c.id}\');save(\'candidates\');renderFinanceiro(document.getElementById(\'pg-financeiro\'));notify(\'✅ Registro excluído\');}"
                 style="background:#fee2e2;border:1px solid #fecaca;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;margin-left:4px;color:#dc2626"
-                title="Excluir registro">🗑️</button>`:''}
+                title="Excluir registro">🗑️</button>')}
             </td>
           </tr>`;
         }).join('')}
@@ -10353,7 +10760,7 @@ function renderFinBody(ft){
         <th>Ações</th>
       </tr></thead>
       <tbody>
-        ${linhasFilt.length===0?`<tr><td colspan="10" class="te">Nenhum prêmio no período.</td></tr>`:''}
+        ${linhasFilt.length===0??'<tr><td colspan="10" class="te">Nenhum prêmio no período.</td></tr>':''}
         ${linhasFilt.map(l=>{
           const rowBg = l.paid?'background:rgba(22,163,74,.04)':'';
           return`<tr style="${rowBg}">
@@ -10366,16 +10773,14 @@ function renderFinBody(ft){
             <td style="font-weight:700;color:${l.valor>0?'#1A4B8F':'#94a3b8'}">${l.valor?fmtV(l.valor):'—'}</td>
             <td style="font-size:12px">${l.date}</td>
             <td>${l.paid
-              ?`<span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;background:#dcfce7;color:#166534">✓ Pago ${l.paidDate}</span>`
-              :`<span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;background:#fef9c3;color:#854d0e">⏳ Pendente</span>`
+              ?'<span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;background:#dcfce7;color:#166534">✓ Pago '+l.paidDate+'</span>'
+              :'<span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;background:#fef9c3;color:#854d0e">⏳ Pendente</span>'
             }</td>
             <td style="display:flex;gap:4px;align-items:center">
               <button class="btn bg bxs" onclick="openEditPremio('${l.candId}')" title="Editar % do prêmio">✏️</button>
               ${!l.paid
-                ?`<button class="btn bsm" style="background:#dcfce7;color:#166534;padding:4px 9px;font-size:11px;border:none;border-radius:6px;cursor:pointer;font-weight:600"
-                   onclick="marcarPremioPago('${l.candId}')">Pago</button>`
-                :`<button class="btn bsm" style="background:#fef9c3;color:#854d0e;padding:4px 9px;font-size:11px;border:none;border-radius:6px;cursor:pointer;font-weight:600"
-                   onclick="marcarPremioRevertido('${l.candId}')">Reverter</button>`
+                ?'<button class="btn bsm" style="background:#dcfce7;color:#166534;padding:4px 9px;font-size:11px;border:none;border-radius:6px;cursor:pointer;font-weight:600" onclick="marcarPremioPago(\''+l.candId+'\')">Pago</button>'
+                :'<button class="btn bsm" style="background:#fef9c3;color:#854d0e;padding:4px 9px;font-size:11px;border:none;border-radius:6px;cursor:pointer;font-weight:600" onclick="marcarPremioRevertido(\''+l.candId+'\')">Reverter</button>'
               }
             </td>
           </tr>`;
@@ -10450,39 +10855,39 @@ function renderFinBody(ft){
             style="border:1.5px solid #e2e8f0;border-radius:7px;padding:7px 10px;font-size:12px;outline:none;width:110px;font-family:'Inter',sans-serif"
             oninput="S.provPeriodo=this.value;renderFinanceiro(document.getElementById('pg-financeiro'))">
         </div>
-        ${isAdmin?`<div>
+        ${_h(isAdmin, '<div>
           <div style="font-size:11px;color:#94a3b8;margin-bottom:4px">Projeção mínima (R$)</div>
           <input type="number" min="0" step="100" placeholder="Ex: 500"
-            value="${S.provMinProj||''}"
+            value="${S.provMinProj||\'\'}"
             style="border:1.5px solid #e2e8f0;border-radius:7px;padding:7px 10px;font-size:12px;outline:none;width:120px"
-            onchange="S.provMinProj=this.value;renderFinanceiro(document.getElementById('pg-financeiro'))">
-        </div>`:''}
+            onchange="S.provMinProj=this.value;renderFinanceiro(document.getElementById(\'pg-financeiro\'))">
+        </div>')}
         <button class="btn bg bsm" onclick="S.provStatus='';S.provPeriodo='';S.provMinProj='';renderFinanceiro(document.getElementById('pg-financeiro'))">Limpar</button>
       </div>
-      ${(S.provStatus||S.provPeriodo||S.provMinProj)?`<div style="font-size:11px;color:#f59e0b;margin-top:8px;font-weight:600">
+      ${_h((S.provStatus||S.provPeriodo||S.provMinProj), '<div style="font-size:11px;color:#f59e0b;margin-top:8px;font-weight:600">
         ⚠️ Filtros ativos — exibindo ${prov.length} de ${provAll.length} candidatos.
-      </div>`:''}
+      </div>')}
     </div>
 
     <!-- CARDS TOTALIZADORES (admin) -->
-    ${isAdmin?`
+    ${_h(isAdmin, '
     <div class="g4" style="margin-bottom:16px">
       <div class="sc" style="border-top:3px solid #16a34a">
         <div class="sl">Admissões OK</div>
         <div class="sv" style="color:#16a34a">${fmtV(totalProjAdm)}</div>
-        <div class="ss">${prov.filter(c=>c.result==='APROVADO').length} candidato(s)</div>
+        <div class="ss">${prov.filter(c=>c.result===\'APROVADO\').length} candidato(s)</div>
       </div>
       <div class="sc" style="border-top:3px solid #3b82f6">
         <div class="sl">Desistentes</div>
         <div class="sv" style="color:#3b82f6">${fmtV(totalProjDesist)}</div>
-        <div class="ss">${prov.filter(c=>c.result==='Desistente').length} candidato(s)</div>
+        <div class="ss">${prov.filter(c=>c.result===\'Desistente\').length} candidato(s)</div>
       </div>
       <div class="sc" style="border-top:3px solid #dc2626">
         <div class="sl">Reprovados</div>
         <div class="sv" style="color:#dc2626">${fmtV(totalProjRep)}</div>
-        <div class="ss">${prov.filter(c=>c.result==='Reprovado').length} candidato(s)</div>
+        <div class="ss">${prov.filter(c=>c.result===\'Reprovado\').length} candidato(s)</div>
       </div>
-    </div>`:''}
+    </div>')}
 
     <!-- TABELA -->
     <div class="tw"><table>
@@ -10539,11 +10944,11 @@ function renderFinBody(ft){
               ${salStr}
               ${c.salarioFinal?'<span style="font-size:10px;color:#f59e0b;margin-left:3px" title="Salário editado">✏️</span>':''}
             </td>
-            ${isAdmin?`
-            <td style="font-size:12px;font-weight:600;color:#E85D1E;text-align:center">${job?.feePercent?job.feePercent+'%':'—'}</td>
-            <td style="font-weight:700;font-size:13px;color:${isRep?'#94a3b8':valor>0?'#1A4B8F':'#94a3b8'}">
-              ${isRep?'<span style="color:#854d0e">R$ 0,00</span>':fmtV(valor)}
-            </td>`:''}
+            ${_h(isAdmin, '
+            <td style="font-size:12px;font-weight:600;color:#E85D1E;text-align:center">${job?.feePercent?job.feePercent+\'%\':\'—\'}</td>
+            <td style="font-weight:700;font-size:13px;color:${isRep?\'#94a3b8\':valor>0?\'#1A4B8F\':\'#94a3b8\'}">
+              ${isRep?\'<span style="color:#854d0e">R$ 0,00</span>\':fmtV(valor)}
+            </td>')}
             <td style="font-size:12px;white-space:nowrap;color:${c.adm?'#1e293b':'#94a3b8'}">
               ${c.adm||'Não informada'}
             </td>
@@ -10559,7 +10964,7 @@ function renderFinBody(ft){
             </td>
           </tr>`;
         }).join('')}
-        ${prov.length===0?`<tr><td colspan="${isAdmin?10:7}" class="te">Nenhum candidato no processo.</td></tr>`:''}
+        ${prov.length===0??'<tr><td colspan="${isAdmin?10:7}" class="te">Nenhum candidato no processo.</td></tr>':''}
       </tbody>
     </table></div></div>
     <p style="font-size:11px;color:#94a3b8;margin-top:8px">
@@ -11013,7 +11418,7 @@ function renderServicosBody(){
         style="border:1.5px solid #e2e8f0;border-radius:7px;padding:6px 10px;font-size:12px">
         ${['2025','2026','2027'].map(a=>`<option value="${a}" ${a===sAno?'selected':''}>${a}</option>`).join('')}
       </select>
-      ${isMaster()?`<button onclick="abrirNovoServico()" style="background:#1A4B8F;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">+ Novo serviço</button>`:''}
+      ${isMaster()??'<button onclick="abrirNovoServico()" style="background:#1A4B8F;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">+ Novo serviço</button>':''}
     </div>
   </div>
 
@@ -11060,7 +11465,7 @@ function renderServicosBody(){
             <td style="padding:10px 12px;font-size:12px">${s.data||'—'}</td>
             <td style="padding:10px 12px">
               <div style="font-size:13px;font-weight:600">${s.descricao||'—'}</div>
-              ${s.obs?`<div style="font-size:10px;color:#94a3b8">${s.obs}</div>`:''}
+              ${s.obs??'<div style="font-size:10px;color:#94a3b8">${s.obs}</div>':''}
             </td>
             <td style="padding:10px 12px;font-size:12px">${s.cliente||'—'}</td>
             <td style="padding:10px 12px"><span style="background:#dbeafe;color:#1e40af;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:600">${s.tipo||'Outro'}</span></td>
@@ -11074,22 +11479,22 @@ function renderServicosBody(){
               </select>`:
               `<span style="background:${pago?'#dcfce7':'#fef9c3'};color:${pago?'#166534':'#854d0e'};border-radius:12px;padding:3px 8px;font-size:10px;font-weight:700">${pago?'✅ Pago':'⏳ Pendente'}</span>`}
             </td>
-            ${isMaster()?`<td style="padding:10px 12px;text-align:center">
+            ${_h(isMaster(), '<td style="padding:10px 12px;text-align:center">
               <button data-sid="${s.id}" onclick="editarServico(this.dataset.sid)"
                 style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:5px;padding:3px 7px;font-size:11px;cursor:pointer;margin-right:4px" title="Editar">✏️</button>
               <button data-sid="${s.id}" onclick="excluirServico(this.dataset.sid)"
                 style="background:#fee2e2;border:1px solid #fecaca;border-radius:5px;padding:3px 7px;font-size:11px;cursor:pointer;color:#dc2626" title="Excluir">🗑</button>
-            </td>`:''}
+            </td>')}
           </tr>`;
         }).join('')}
       </tbody>
-      ${filtrados.length>0&&totalRoyalties>0?`<tfoot>
+      ${_h(filtrados.length>0&&totalRoyalties>0, '<tfoot>
         <tr style="background:#faf5ff;border-top:2px solid #d8b4fe">
           <td colspan="5" style="padding:10px 12px;font-size:12px;font-weight:700;color:#7c3aed">TOTAL ROYALTIES A REPASSAR (pagos no período)</td>
           <td style="padding:10px 12px;text-align:right;font-size:14px;font-weight:800;color:#7c3aed">${fmtR(totalRoyalties)}</td>
           <td colspan="${isMaster()?2:1}"></td>
         </tr>
-      </tfoot>`:''}
+      </tfoot>')}
     </table>
   </div>
 
@@ -11347,11 +11752,11 @@ function renderMetasBody(){
             <div style="font-size:13px;font-weight:700;color:${cor}">${bonus.label}</div>
           </div>
         </div>
-        ${canSeeValores()?`
+        ${_h(canSeeValores(), '
         <div style="margin-top:8px;font-size:11px;color:#64748b;display:flex;justify-content:space-between">
           <span>Base: ${fmtR(valorRecebido)}</span>
           <span style="font-weight:700;color:${cor}">Bônus: ${fmtR(valorBonus)}</span>
-        </div>`:''}
+        </div>')}
       </div>`;
     }).join('')}
   </div>
@@ -11702,21 +12107,21 @@ function _clienteRow(cl, canEdit, termo){
     <!-- Ações sempre visíveis -->
     <td style="padding:8px 12px;white-space:nowrap">
       <div style="display:flex;gap:5px;align-items:center">
-        ${canEdit?`
-          <button onclick="openEditClient('${cl.id}')"
+        ${_h(canEdit, '
+          <button onclick="openEditClient(\'${cl.id}\')"
             style="background:#1A4B8F;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer"
             title="Editar">✏️ Editar</button>
           <button data-cid="${cl.id}" onclick="excluirCliente(this.dataset.cid)"
             style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer"
             title="Excluir">🗑</button>
-        `:''}
-        ${tel?`<button data-tel="${tel.replace(/\D/g,'')}" data-nome="${cl.name}"
+        ')}
+        ${_h(tel, '<button data-tel="${tel.replace(/\\D/g,\'\')}" data-nome="${cl.name}"
           onclick="enviarWhatsCliente(this.dataset.tel,this.dataset.nome)"
           style="background:#25D366;color:#fff;border:none;border-radius:6px;padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer"
-          title="WhatsApp">💬</button>`:''}
-        ${email?`<a href="mailto:${email}"
+          title="WhatsApp">💬</button>')}
+        ${_h(email, '<a href="mailto:${email}"
           style="background:#dbeafe;color:#1d4ed8;border-radius:6px;padding:5px 8px;font-size:11px;font-weight:700;text-decoration:none"
-          title="E-mail">✉️</a>`:''}
+          title="E-mail">✉️</a>')}
       </div>
     </td>
   </tr>
@@ -11724,50 +12129,50 @@ function _clienteRow(cl, canEdit, termo){
   <tr id="${rowId}" style="display:none;background:#f8fafc">
     <td colspan="3" style="padding:12px 16px 14px 40px">
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px 20px">
-        ${tel?`<div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Tel. RH</div><div style="font-size:13px">${renderTelCell(tel)}</div></div>`:''}
-        ${email?`<div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">E-mail RH</div><div style="font-size:12px;color:#1d4ed8">${renderEmailCell(email,'rh')}</div></div>`:''}
-        ${cl.phoneFin?`<div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Tel. Financeiro</div><div style="font-size:13px">${renderTelCell(cl.phoneFin)}</div></div>`:''}
-        ${cl.emailFin?`<div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">E-mail Financeiro</div><div style="font-size:12px;color:#1d4ed8">${renderEmailCell(cl.emailFin,'fin')}</div></div>`:''}
-        ${cl.nomeContato?`<div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Contato</div><div style="font-size:13px">${cl.nomeContato}</div></div>`:''}
+        ${tel??'<div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Tel. RH</div><div style="font-size:13px">${renderTelCell(tel)}</div></div>':''}
+        ${_h(email, '<div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">E-mail RH</div><div style="font-size:12px;color:#1d4ed8">${renderEmailCell(email,\'rh\')}</div></div>')}
+        ${_h(cl.phoneFin, '<div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Tel. Financeiro</div><div style="font-size:13px">${renderTelCell(cl.phoneFin)}</div></div>')}
+        ${_h(cl.emailFin, '<div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">E-mail Financeiro</div><div style="font-size:12px;color:#1d4ed8">${renderEmailCell(cl.emailFin,\'fin\')}</div></div>')}
+        ${cl.nomeContato??'<div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Contato</div><div style="font-size:13px">${cl.nomeContato}</div></div>':''}
         <div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Prazo pagto</div><div style="font-size:13px;font-weight:600;color:${(cl.payDays||3)>3?'#854d0e':'#166534'}">${cl.payDays||3}d após ADM</div></div>
-        ${cl.cnpj?`<div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">CNPJ</div><div style="font-size:12px">${cl.cnpj}</div></div>`:''}
-        ${cl.notes?`<div style="grid-column:1/-1"><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Obs.</div><div style="font-size:12px;color:#64748b">${cl.notes}</div></div>`:''}
+        ${cl.cnpj??'<div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">CNPJ</div><div style="font-size:12px">${cl.cnpj}</div></div>':''}
+        ${_h(cl.notes, '<div style="grid-column:1/-1"><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">Obs.</div><div style="font-size:12px;color:#64748b">${cl.notes}</div></div>')}
       </div>
-      ${(cl.statusProspeccao||cl.ultimoFollowup||cl.proximoFollowup||cl.obsFollowup||cl.propostaLink)?`
+      ${_h((cl.statusProspeccao||cl.ultimoFollowup||cl.proximoFollowup||cl.obsFollowup||cl.propostaLink)?, '
       <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #e2e8f0;display:flex;flex-wrap:wrap;gap:10px 20px;align-items:flex-start">
-        ${cl.statusProspeccao?`<div>
+        ${_h(cl.statusProspeccao, \'<div>
           <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Status</div>
           <span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px;background:${
-            cl.statusProspeccao==='Cliente ativo'?'#dcfce7':
-            cl.statusProspeccao==='Proposta enviada'||cl.statusProspeccao==='Em negociação'?'#fef3c7':
-            cl.statusProspeccao==='Sem interesse'||cl.statusProspeccao==='Sem retorno'?'#fee2e2':'#dbeafe'
+            cl.statusProspeccao===\\\'Cliente ativo\\\'?\\\'#dcfce7\\\':
+            cl.statusProspeccao===\\\'Proposta enviada\\\'||cl.statusProspeccao===\\\'Em negociação\\\'?\\\'#fef3c7\\\':
+            cl.statusProspeccao===\\\'Sem interesse\\\'||cl.statusProspeccao===\\\'Sem retorno\\\'?\\\'#fee2e2\\\':\\\'#dbeafe\\\'
           };color:${
-            cl.statusProspeccao==='Cliente ativo'?'#166534':
-            cl.statusProspeccao==='Proposta enviada'||cl.statusProspeccao==='Em negociação'?'#92400e':
-            cl.statusProspeccao==='Sem interesse'||cl.statusProspeccao==='Sem retorno'?'#dc2626':'#1d4ed8'
+            cl.statusProspeccao===\\\'Cliente ativo\\\'?\\\'#166534\\\':
+            cl.statusProspeccao===\\\'Proposta enviada\\\'||cl.statusProspeccao===\\\'Em negociação\\\'?\\\'#92400e\\\':
+            cl.statusProspeccao===\\\'Sem interesse\\\'||cl.statusProspeccao===\\\'Sem retorno\\\'?\\\'#dc2626\\\':\\\'#1d4ed8\\\'
           }">${cl.statusProspeccao}</span>
-        </div>`:''}
-        ${cl.responsavelFollowup?`<div>
+        </div>\')}
+        ${_h(cl.responsavelFollowup, \'<div>
           <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Responsável</div>
           <div style="font-size:12px;font-weight:500">👤 ${cl.responsavelFollowup}</div>
-        </div>`:''}
-        ${cl.ultimoFollowup?`<div>
+        </div>\')}
+        ${_h(cl.ultimoFollowup, \'<div>
           <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Último followup</div>
           <div style="font-size:12px;font-weight:500">📅 ${cl.ultimoFollowup}</div>
-        </div>`:''}
-        ${cl.proximoFollowup?`<div>
+        </div>\')}
+        ${_h(cl.proximoFollowup, \'<div>
           <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Próximo followup</div>
           <div style="font-size:12px;font-weight:600;color:#E85D1E">🔔 ${cl.proximoFollowup}</div>
-        </div>`:''}
-        ${cl.propostaLink?`<div>
+        </div>\')}
+        ${_h(cl.propostaLink && S.user.role===\'admin\', \'<div>
           <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Proposta</div>
           <a href="${cl.propostaLink}" target="_blank" style="font-size:12px;font-weight:600;color:#1d4ed8;text-decoration:none">📄 Abrir proposta ↗</a>
-        </div>`:''}
-        ${cl.obsFollowup?`<div style="flex-basis:100%">
+        </div>\')}
+        ${_h(cl.obsFollowup, \'<div style="flex-basis:100%">
           <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Obs. followup</div>
           <div style="font-size:12px;color:#475569;font-style:italic">"${cl.obsFollowup}"</div>
-        </div>`:''}
-      </div>`:''}
+        </div>\')}
+      </div>')}
     </td>
   </tr>`;
 }
@@ -11843,7 +12248,7 @@ function renderClientes(el){
   <div class="tb" style="margin-bottom:14px">
     <div>
       <h1 class="pt">Clientes & Pipeline</h1>
-      <p class="ps">${filt.length} cliente${filt.length!==1?'s':''} · ${idsComVaga.size} ativo${idsComVaga.size!==1?'s':''} com vaga${vencidos>0?` · <strong style="color:#dc2626">${vencidos} follow-up${vencidos!==1?'s':''} vencido${vencidos!==1?'s':''}</strong>`:''}</p>
+      <p class="ps">${filt.length} cliente${filt.length!==1?'s':''} · ${idsComVaga.size} ativo${idsComVaga.size!==1?'s':''} com vaga${vencidos>0??' · <strong style="color:#dc2626">${vencidos} follow-up${vencidos!==1?\'s\':\'\'} vencido${vencidos!==1?\'s\':\'\'}</strong>':''}</p>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <!-- Toggle Vista -->
@@ -11855,14 +12260,14 @@ function renderClientes(el){
           ⠿ Pipeline
         </button>
       </div>
-      ${S.user.role==='admin'?`
+      ${_h(S.user.role==='admin', '
         <button title="Exportar clientes para Excel" class="btn bsm" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer" onclick="exportarClientes()">⬇️ Exportar</button>
         <button title="Baixar modelo de importação de clientes" class="btn bsm" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer" onclick="baixarModeloClientes()">📋 Modelo</button>
         <label title="Importar clientes de planilha Excel" style="background:#fefce8;color:#854d0e;border:1px solid #fde68a;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px">
           ⬆️ Importar
           <input type="file" accept=".xlsx,.xls" style="display:none" onchange="importarClientes(this)">
         </label>
-      `:''}
+      ')}
       ${canEdit?'<button title="Cadastrar novo cliente" class="btn bp bsm" onclick="openAddClient()">+ Novo cliente</button>':''}
     </div>
   </div>
@@ -11886,10 +12291,10 @@ function renderClientes(el){
       <option value="semana"  ${fw==='semana' ?'selected':''}>📆 Esta semana</option>
       <option value="sem"     ${fw==='sem'    ?'selected':''}>❌ Sem data</option>
     </select>
-    ${(busca||S.clFiltroStatus||fw)?`
-      <button onclick="S.clClienteBusca='';S.clFiltroStatus='';S.clFiltroFw='';renderClientes(document.getElementById('pg-clientes'))"
+    ${_h((busca||S.clFiltroStatus||fw), '
+      <button onclick="S.clClienteBusca=\'\';S.clFiltroStatus=\'\';S.clFiltroFw=\'\';renderClientes(document.getElementById(\'pg-clientes\'))"
         style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer">✕ Limpar</button>
-    `:''}
+    ')}
   </div>
 
   ${view==='kanban' ? _renderKanban(ESTAGIOS, S.clients, idsComVaga, fwBadge, canEdit) : `
@@ -11948,7 +12353,7 @@ function _renderKanban(estagios, clientes, idsComVaga, fwBadge, canEdit){
           '<div class="kn-card-sub">'+(cl.city||'—')+(cl.responsavelFollowup?' · '+cl.responsavelFollowup:'')+'</div>'+
           '<div class="kn-card-footer">'+
             fwBadge(cl)+
-            (cl.propostaLink?'<a href="'+cl.propostaLink+'" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;color:#1A4B8F;text-decoration:none;font-weight:600" title="Ver proposta">📄 Proposta</a>':'')+
+            (cl.propostaLink && S.user.role==='admin' ?'<a href="'+cl.propostaLink+'" target="_blank" onclick="event.stopPropagation()" style="font-size:10px;color:#1A4B8F;text-decoration:none;font-weight:600" title="Ver proposta">📄 Proposta</a>':'')+
           '</div>'+
           (canEdit?'<div style="display:flex;gap:4px;margin-top:8px;border-top:1px solid #f1f5f9;padding-top:6px">'+
             '<select data-cid="'+cl.id+'" onchange="event.stopPropagation();moverKanban(this.dataset.cid,this.value);this.blur()" onclick="event.stopPropagation()"'+
@@ -12063,12 +12468,10 @@ function openAddClient(){
       <div class="f ffc"><label>Razão Social <span class="req">*</span></label><input id="cln" placeholder="Nome jurídico da empresa"></div>
       <div class="f ffc"><label>Nome Fantasia</label><input id="cln-fantasia" placeholder="Nome comercial / como é conhecido"></div>
       ${S.user.role==='admin'?`
-      ${S.user.role==='admin'?`
       <div class="f"><label>CNPJ <span style="font-size:10px;color:#94a3b8">🔒 Admin</span></label>
         <div style="display:flex;gap:6px"><input id="clcnpj" placeholder="XX.XXX.XXX/XXXX-XX" oninput="maskCNPJ(this)" maxlength="18" style="flex:1">
         <button type="button" onclick="buscarCNPJ(document.getElementById('clcnpj').value,'clnew')" style="background:#1A4B8F;color:#fff;border:none;border-radius:6px;padding:6px 10px;font-size:11px;cursor:pointer;white-space:nowrap">🔍 Buscar dados</button>
         </div></div>
-      `:`<input type="hidden" id="clcnpj" value="">`}
       <div class="f"><label>Prazo de pagamento (dias após ADM) <span style="font-size:10px;color:#94a3b8">🔒 Admin</span></label><input id="clpd" type="number" value="3" min="1"></div>
       <div class="f" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 12px">
         <label style="color:#92400e;font-weight:600;font-size:12px">❌ Taxa de Cancelamento <span style="font-size:10px;font-weight:400;color:#94a3b8">🔒 Apenas admin/financeiro</span></label>
@@ -12090,7 +12493,7 @@ function openAddClient(){
           Visível apenas para administradores. Recrutadoras não têm acesso a esta informação.
         </div>
       </div>
-      `:`<input type="hidden" id="clpd" value="3"><input type="hidden" id="cl-cancel-taxa" value=""><input type="hidden" id="cl-cancel-pct" value="">`}
+      `:`<input type="hidden" id="clcnpj" value=""><input type="hidden" id="clpd" value="3"><input type="hidden" id="cl-cancel-taxa" value=""><input type="hidden" id="cl-cancel-pct" value="">`}
       <div class="f"><label>CEP</label>
         <div style="display:flex;gap:6px">
           <input id="cl-cep" placeholder="00000-000" maxlength="9" oninput="maskCEP(this)" style="flex:1">
@@ -12107,28 +12510,6 @@ function openAddClient(){
     <!-- Proposta Autentique -->
     <div style="border-top:1.5px solid #e2e8f0;margin:10px 0 10px;padding-top:12px">
       <div style="font-size:11px;font-weight:700;color:#1A4B8F;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">📄 Proposta comercial (Autentique)</div>
-      ${canSeeValores()?`
-      <div class="f" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 12px">
-        <label style="color:#92400e;font-weight:600;font-size:12px">❌ Taxa de Cancelamento <span style="font-size:10px;font-weight:400;color:#94a3b8">🔒 Apenas admin/financeiro — oculto para recrutadoras</span></label>
-        <div style="display:flex;gap:12px;align-items:center;margin-top:6px;flex-wrap:wrap">
-          <label style="display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer">
-            <input type="checkbox" id="cl-cancel-taxa" ${cl.taxaCancelamento?'checked':''}
-              onchange="document.getElementById('cl-cancel-pct-wrap').style.display=this.checked?'flex':'none'">
-            Este cliente tem cláusula de taxa de cancelamento
-          </label>
-          <div id="cl-cancel-pct-wrap" style="display:${cl.taxaCancelamento?'flex':'none'};gap:8px;align-items:center">
-            <input id="cl-cancel-pct" type="number"
-              min="${R.VAGAS.CANCELAMENTO_PCT_MIN}" max="${R.VAGAS.CANCELAMENTO_PCT_MAX}"
-              step="1" value="${cl.pctCancelamento||R.VAGAS.CANCELAMENTO_PCT_PADRAO}"
-              style="width:70px;border:1.5px solid #fde68a;border-radius:6px;padding:4px 8px;font-size:13px">
-            <span style="font-size:12px;color:#92400e">% do salário (${R.VAGAS.CANCELAMENTO_PCT_MIN}–${R.VAGAS.CANCELAMENTO_PCT_MAX}%)</span>
-          </div>
-        </div>
-        <div style="font-size:11px;color:#92400e;margin-top:4px">
-          ⚠️ Royalties de ${R.FINANCEIRO.TAXA_ROYALTIES}% incidem sobre a taxa de cancelamento.
-        </div>
-      </div>`:''}
-
       <div class="f">
         <label>Link da proposta no Autentique</label>
         <input id="cl-proposta-link" placeholder="https://app.autentique.com.br/..." style="width:100%">
@@ -12334,19 +12715,19 @@ function openEditClient(cid){
       </div>
     </div>
 
-    <!-- ── PROPOSTA ── -->
-    <div style="border-top:1.5px solid #e2e8f0;margin:10px 0 10px;padding-top:12px">
+    <!-- ── PROPOSTA — apenas admin ── -->
+    ${S.user.role==='admin' ? `<div style="border-top:1.5px solid #e2e8f0;margin:10px 0 10px;padding-top:12px">
       <div style="font-size:11px;font-weight:700;color:#1A4B8F;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">📄 Proposta comercial (Autentique)</div>
       <div class="f">
         <label>Link da proposta no Autentique</label>
         <div style="display:flex;gap:6px">
           <input id="cl-proposta-link" value="${cl.propostaLink||''}" placeholder="https://app.autentique.com.br/..." style="flex:1">
-          ${cl.propostaLink?`<a href="${cl.propostaLink}" target="_blank"
-            style="background:#dbeafe;color:#1d4ed8;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap">📂 Abrir</a>`:''}
+          ${_h(cl.propostaLink, '<a href="${cl.propostaLink}" target="_blank"
+            style="background:#dbeafe;color:#1d4ed8;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap">📂 Abrir</a>')}
         </div>
         <div style="font-size:11px;color:#94a3b8;margin-top:4px">Cole aqui o link do documento gerado no Autentique para assinatura online.</div>
       </div>
-    </div>
+    </div>` : '<input type="hidden" id="cl-proposta-link" value="">'}
 
     <!-- ── CONTATO RH ── -->
     <div style="border-top:1.5px solid #e2e8f0;margin:10px 0 10px;padding-top:12px">
@@ -12431,9 +12812,13 @@ async function renderUsuarios(el){
     </div>
   </div>
   <div style="background:#fffbf0;border:1px solid #fed7aa;border-radius:10px;padding:14px 16px;margin-bottom:20px;font-size:13px;color:#92400e">
-    <strong>Como funciona:</strong> usuários podem entrar com <strong>Google</strong> (recomendado) ou e-mail/senha. No primeiro login com Google, o perfil é criado automaticamente e aparece aqui. Depois é só editar o papel (admin/recrutadora/comercial).<br>
-    Para criar um usuário com e-mail/senha, clique em "+ Novo usuário".<br><br>
-    <strong>Papéis:</strong> <span style="background:#dcfce7;color:#166534;padding:2px 7px;border-radius:4px;font-weight:600">admin</span> — acesso total &nbsp;|&nbsp; <span style="background:#dbeafe;color:#1e40af;padding:2px 7px;border-radius:4px;font-weight:600">recruiter</span> — recrutadoras &nbsp;|&nbsp; <span style="background:#fef9c3;color:#854d0e;padding:2px 7px;border-radius:4px;font-weight:600">comercial</span> — equipe comercial
+    <strong>Como funciona:</strong> cadastre cada membro da equipe com e-mail, senha e papel. O papel define quais módulos cada pessoa pode acessar.<br><br>
+    <strong>Papéis disponíveis:</strong><br>
+    🔑 <strong>Admin</strong> — acesso total (vagas, candidatos, financeiro, clientes, usuários)<br>
+    👔 <strong>Rec. CLT</strong> — vê todas as vagas e candidatos, aprova, envia pareceres. Sem financeiro.<br>
+    👤 <strong>Rec. PJ</strong> — vê apenas suas próprias vagas e candidatos vinculados a ela.<br>
+    💼 <strong>Comercial</strong> — vê vagas e clientes. Pode cadastrar clientes e vagas. Sem financeiro.<br><br>
+    <strong>Usuários sem cadastro</strong> verão uma tela de bloqueio ao tentar entrar.
   </div>
   <div id="users-list"><div style="text-align:center;padding:24px"><div style="width:32px;height:32px;border:3px solid #e2e8f0;border-top-color:#E85D1E;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 10px"></div><p style="color:#94a3b8;font-size:13px">Carregando usuários...</p></div></div>`;
   loadUsersList();
@@ -12499,15 +12884,18 @@ function openAddUser(){
       <div class="f ffc"><label>Nome completo <span class="req">*</span></label><input id="un" placeholder="Ex: Patricia Santos"></div>
       <div class="f ffc"><label>E-mail <span class="req">*</span></label><input type="email" id="ue" placeholder="patricia@rhf.com.br"></div>
       <div class="f ffc"><label>Senha inicial <span class="req">*</span></label><input type="password" id="upw" placeholder="Mínimo 6 caracteres"></div>
-      <div class="f"><label>Papel</label>
-        <select id="ur">
-          <option value="recruiter">👤 Rec. PJ (vê apenas suas vagas)</option>
-          <option value="clt">👔 Rec. CLT (vê todas as vagas)</option>
-          <option value="admin">🔑 Admin (acesso total)</option>
-          <option value="comercial">💼 Comercial (clientes e vagas)</option>
+      <div class="f ffc"><label>Papel / Nível de acesso <span class="req">*</span></label>
+        <select id="ur" onchange="document.getElementById('role-desc').innerHTML=_roleDesc(this.value)" style="margin-bottom:6px">
+          <option value="clt">👔 Recrutadora CLT</option>
+          <option value="recruiter">👤 Recrutadora PJ</option>
+          <option value="admin">🔑 Administrador</option>
+          <option value="comercial">💼 Comercial</option>
         </select>
+        <div id="role-desc" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;font-size:12px;color:#475569;line-height:1.7">
+          ${_roleDesc('clt')}
+        </div>
       </div>
-      <div class="f"><label>Recrutadora vinculada (se recruiter)</label>
+      <div class="f"><label>Recrutadora vinculada</label>
         <select id="urid">
           <option value="">— nenhuma —</option>
           ${S.recruiters.map(r=>`<option value="${r.id}">${r.name}</option>`).join('')}
@@ -12515,6 +12903,16 @@ function openAddUser(){
       </div>
     </div>`,
     `<button class="btn bg bsm" onclick="closeMo()">Cancelar</button><button class="btn bp bsm" onclick="createUser()">Criar usuário</button>`);
+}
+
+function _roleDesc(role){
+  const desc = {
+    admin:     '🔑 <strong>Administrador</strong> — acesso total: vagas, candidatos, financeiro, clientes, usuários, relatórios e configurações.',
+    clt:       '👔 <strong>Recrutadora CLT</strong> — vê todas as vagas e candidatos, pode aprovar candidatos, enviar pareceres e acessar painel geral. <em>Não vê financeiro.</em>',
+    recruiter: '👤 <strong>Recrutadora PJ</strong> — vê apenas as vagas e candidatos vinculados a ela. Pode cadastrar candidatos e enviar pareceres. <em>Não vê financeiro nem outras recrutadoras.</em>',
+    comercial: '💼 <strong>Comercial</strong> — vê vagas e clientes, pode cadastrar clientes e vagas. <em>Não vê financeiro nem candidatos de outras recrutadoras.</em>',
+  };
+  return desc[role] || '';
 }
 
 async function createUser(){
@@ -12551,8 +12949,19 @@ async function createUser(){
     renderUsuarios(document.getElementById('pg-usuarios'));
     notify('✅ Usuário criado com sucesso!');
   } catch(e) {
-    const msgs={'auth/email-already-in-use':'E-mail já cadastrado.','auth/invalid-email':'E-mail inválido.','auth/weak-password':'Senha muito fraca.'};
-    notify(msgs[e.code]||'Erro: '+e.message,'e');
+    const msgs={
+      'auth/email-already-in-use':'E-mail já cadastrado no sistema.',
+      'auth/invalid-email':'E-mail inválido.',
+      'auth/weak-password':'Senha muito fraca (mínimo 6 caracteres).',
+      'auth/operation-not-allowed':'Login por e-mail/senha não está habilitado no Firebase. Ative em Authentication → Sign-in method.',
+      'auth/network-request-failed':'Sem conexão com o servidor. Verifique a internet.',
+    };
+    const msg = msgs[e.code] || 'Erro ao criar usuário: '+e.message;
+    notify('❌ '+msg,'e');
+    // Se o erro foi no Auth mas o perfil foi salvo no Firestore, avisar
+    if(e.code && e.code.startsWith('auth/')){
+      console.error('[createUser] Falhou no Firebase Auth:', e.code, '— usuário NÃO foi criado.');
+    }
     if(btn){btn.textContent='Criar usuário';btn.disabled=false;}
   }
 }
@@ -13142,33 +13551,33 @@ function openEditCand(cid, abaInicial){
         </div>
 
         <!-- Resultado da entrevista RHF -->
-        ${c.interviewRhfDate?`
+        ${_h(c.interviewRhfDate, '
         <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
           <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px">📋 Resultado da entrevista RHF</div>
           <div class="fg2">
             <div class="f ffc"><label>Candidato compareceu?</label>
               <select id="rhf-compareceu">
-                <option value="" ${!c.rhfCompareceu?'selected':''}>—</option>
-                <option ${c.rhfCompareceu==='SIM'?'selected':''}>SIM</option>
-                <option ${c.rhfCompareceu==='NÃO'?'selected':''}>NÃO</option>
+                <option value="" ${!c.rhfCompareceu?\'selected\':\'\'}>—</option>
+                <option ${c.rhfCompareceu===\'SIM\'?\'selected\':\'\'}>SIM</option>
+                <option ${c.rhfCompareceu===\'NÃO\'?\'selected\':\'\'}>NÃO</option>
               </select>
             </div>
             <div class="f ffc"><label>Avaliação da recrutadora</label>
               <select id="rhf-avaliacao">
                 <option value="">—</option>
-                <option ${c.rhfAvaliacao==='Aderente'?'selected':''}>✅ Aderente à vaga</option>
-                <option ${c.rhfAvaliacao==='Não aderente'?'selected':''}>❌ Não aderente</option>
-                <option ${c.rhfAvaliacao==='Parcialmente'?'selected':''}>⚠️ Parcialmente aderente</option>
+                <option ${c.rhfAvaliacao===\'Aderente\'?\'selected\':\'\'}>✅ Aderente à vaga</option>
+                <option ${c.rhfAvaliacao===\'Não aderente\'?\'selected\':\'\'}>❌ Não aderente</option>
+                <option ${c.rhfAvaliacao===\'Parcialmente\'?\'selected\':\'\'}>⚠️ Parcialmente aderente</option>
               </select>
             </div>
             <div class="f ffc"><label>Observações da entrevista</label>
-              <textarea id="rhf-obs-result" rows="3" placeholder="Pontos fortes, pontos de atenção, impressão geral...">${c.rhfObsResult||''}</textarea>
+              <textarea id="rhf-obs-result" rows="3" placeholder="Pontos fortes, pontos de atenção, impressão geral...">${c.rhfObsResult||\'\'}</textarea>
             </div>
           </div>
           <button data-cid="${cid}" onclick="_salvarResultadoRHF(this.dataset.cid)" style="background:#1A4B8F;color:#fff;border:none;border-radius:7px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;margin-top:10px">
             💾 Salvar resultado
           </button>
-        </div>`:''}
+        </div>')}
       </div>`;
     }
 
@@ -13187,7 +13596,7 @@ function openEditCand(cid, abaInicial){
               </select>
             </div>
           </div>
-          ${c.parecerDate?`<div style="font-size:11px;color:#94a3b8">Gerado em: ${c.parecerDate}</div>`:''}
+          ${c.parecerDate??'<div style="font-size:11px;color:#94a3b8">Gerado em: ${c.parecerDate}</div>':''}
         </div>
 
         <!-- FORMULÁRIO DE DADOS PARA O PARECER -->
@@ -14386,27 +14795,27 @@ function openEditProvisao(candId){
       </div>
 
       <!-- % FEE (admin only) -->
-      ${isAdmin?`
+      ${_h(isAdmin, '
       <div class="f">
-        <label>% Fee cobrado (padrão: ${job.feePercent||'—'}%)</label>
+        <label>% Fee cobrado (padrão: ${job.feePercent||\'—\'}%)</label>
         <input id="prov-fee" type="number" min="0" max="100" step="0.5"
-          value="${c.feeCustom||job.feePercent||''}"
-          placeholder="${job.feePercent||'Ex: 12'}"
+          value="${c.feeCustom||job.feePercent||\'\'}"
+          placeholder="${job.feePercent||\'Ex: 12\'}"
           oninput="recalcProvPreview()"
-          ${isRep?'style="background:#f1f5f9;color:#94a3b8"':''}>
+          ${isRep?\'style="background:#f1f5f9;color:#94a3b8"\':\'\'}>
         <div style="font-size:11px;color:#94a3b8;margin-top:3px">Deixe em branco para usar o % padrão da vaga.</div>
-      </div>`:''}
+      </div>')}
 
       <!-- PROJEÇÃO (calculada) -->
-      ${isAdmin?`
+      ${_h(isAdmin, '
       <div class="f ffc">
         <label>Projeção calculada</label>
-        <div id="prov-preview" style="font-size:16px;font-weight:700;color:${isRep?'#854d0e':'#1A4B8F'};
-          background:${isRep?'#fffbeb':'#eff6ff'};border-radius:8px;padding:10px 14px;border:1px solid ${isRep?'#fde68a':'#bfdbfe'}">
-          ${isRep?'R$ 0,00 — Reposição':fmtV(projAtual)}
+        <div id="prov-preview" style="font-size:16px;font-weight:700;color:${isRep?\'#854d0e\':\'#1A4B8F\'};
+          background:${isRep?\'#fffbeb\':\'#eff6ff\'};border-radius:8px;padding:10px 14px;border:1px solid ${isRep?\'#fde68a\':\'#bfdbfe\'}">
+          ${isRep?\'R$ 0,00 — Reposição\':fmtV(projAtual)}
         </div>
         <div style="font-size:11px;color:#94a3b8;margin-top:3px">Atualiza automaticamente ao editar salário ou %.</div>
-      </div>`:''}
+      </div>')}
     </div>`,
     `<button class="btn bg bsm" onclick="closeMo()">Cancelar</button>
      <button class="btn bp bsm" onclick="salvarEditProvisao('${candId}')">💾 Salvar</button>`,
@@ -14979,16 +15388,34 @@ function updateRec(rid){
   const contratoFile = document.getElementById('r-contrato')?.files[0];
   const pjsCbs = document.querySelectorAll('.pj-link-cb:checked');
   const pjsVinculados = Array.from(pjsCbs).map(cb=>cb.value);
+  let rate = Number(document.getElementById('rr')?.value||0);
+  // Normalizar: se digitaram 0.05 em vez de 5, corrigir automaticamente
+  if(rate > 0 && rate < 1) rate = rate * 100;
   S.recruiters=S.recruiters.map(r=>r.id===rid?{...r,
     name:  document.getElementById('rn')?.value||r.name,
     type:  document.getElementById('rt')?.value||r.type,
-    rate:  Number(document.getElementById('rr')?.value||0),
+    rate,
     phone: document.getElementById('r-phone')?.value||r.phone||'',
     email: document.getElementById('r-email')?.value||r.email||'',
     contratoNome: contratoFile ? contratoFile.name : (r.contratoNome||''),
     pjsVinculados: (document.getElementById('rt')?.value||r.type)==='CLT' ? pjsVinculados : (r.pjsVinculados||[]),
   }:r);
-  save('recruiters');closeMo();renderRecrutadoras(document.getElementById('pg-recrutadoras'));notify('✅ Atualizada!');
+  // Corrigir premCustomRate dos candidatos desta recrutadora (0.05 → 5)
+  const rec = S.recruiters.find(r=>r.id===rid);
+  if(rec){
+    let fixedCands = false;
+    S.candidates = S.candidates.map(c=>{
+      if(c.rec !== rec.name) return c;
+      const pr = c.premCustomRate;
+      if(pr && pr > 0 && pr < 1){ fixedCands = true; return {...c, premCustomRate: pr*100}; }
+      return c;
+    });
+    if(fixedCands) save('candidates');
+  }
+  save('recruiters');
+  closeMo();
+  renderRecrutadoras(document.getElementById('pg-recrutadoras'));
+  notify('✅ Atualizada! Taxa: '+rate+'%');
 }
 
 function togglePausarRec(rid){
