@@ -224,53 +224,52 @@ nav{flex:1;padding:10px 8px;overflow-y:auto}
   <div style="background:#fff;border-radius:20px;padding:40px 44px;width:100%;max-width:420px;box-shadow:0 30px 80px rgba(0,0,0,.3)">
     <div style="width:64px;height:64px;background:#E85D1E;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:#fff;font-family:'Inter',sans-serif;font-weight:800;font-size:22px">RHF</div>
     <h1 style="font-size:24px;text-align:center;margin-bottom:4px">Portal RHF Talentos</h1>
-    <p style="font-size:14px;color:#64748b;text-align:center;margin-bottom:24px">Acesso restrito à equipe interna</p>
+    <p style="font-size:14px;color:#64748b;text-align:center;margin-bottom:28px">Acesso restrito à equipe interna</p>
 
-    <!-- BOTÃO GOOGLE — método principal -->
-    <button id="btn-google" onclick="doLoginGoogle()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:12px;padding:13px;border:2px solid #e2e8f0;border-radius:10px;background:#fff;font-size:15px;font-family:'Inter',sans-serif;font-weight:700;color:#1e293b;cursor:pointer;transition:all .15s;margin-bottom:16px">
-      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
-      Entrar com Google
+    <!-- FORM EMAIL/SENHA — método principal -->
+    <div class="f" style="margin-bottom:14px">
+      <label style="font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;display:block">E-mail</label>
+      <input type="email" id="lemail" placeholder="seu@email.com"
+        style="width:100%;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 14px;font-size:14px;outline:none;transition:border .2s;box-sizing:border-box"
+        onfocus="this.style.borderColor='#1A4B8F'" onblur="this.style.borderColor='#e2e8f0'"
+        onkeydown="if(event.key==='Enter')document.getElementById('lpass').focus()">
+    </div>
+    <div class="f" style="margin-bottom:8px">
+      <label style="font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;display:block">Senha</label>
+      <input type="password" id="lpass" placeholder="••••••••"
+        style="width:100%;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 14px;font-size:14px;outline:none;transition:border .2s;box-sizing:border-box"
+        onfocus="this.style.borderColor='#1A4B8F'" onblur="this.style.borderColor='#e2e8f0'"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+
+    <p id="le" style="color:#dc2626;font-size:12px;background:#fee2e2;border-radius:6px;padding:8px 12px;margin-bottom:12px;display:none"></p>
+
+    <button class="btn bp" style="width:100%;justify-content:center;padding:13px;font-size:15px;font-family:'Inter',sans-serif;border-radius:10px;margin-bottom:16px" id="login-btn" onclick="doLogin()">
+      🔐 Entrar
     </button>
 
-    <!-- DIVISOR -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-      <div style="flex:1;height:1px;background:#e2e8f0"></div>
-      <span style="font-size:12px;color:#94a3b8;white-space:nowrap">ou use e-mail e senha</span>
-      <div style="flex:1;height:1px;background:#e2e8f0"></div>
-    </div>
+    <p style="text-align:center;font-size:11px;color:#94a3b8">Acesso apenas para equipe cadastrada RHF Talentos</p>
 
-    <!-- FORM EMAIL/SENHA — alternativo -->
-    <div class="f"><label>E-mail</label>
-      <input type="email" id="lemail" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')document.getElementById('lpass').focus()">
-    </div>
-    <div class="f"><label>Senha</label>
-      <input type="password" id="lpass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
-    </div>
-    <p id="le" style="color:#dc2626;font-size:12px;background:#fee2e2;border-radius:6px;padding:8px 12px;margin-bottom:10px;display:none"></p>
-    <button class="btn bp" style="width:100%;justify-content:center;padding:11px;font-size:14px;font-family:'Inter',sans-serif;margin-bottom:4px" id="login-btn" onclick="doLogin()">Entrar com e-mail</button>
-    <p style="text-align:center;font-size:11px;color:#94a3b8;margin-top:10px">Acesso apenas para equipe cadastrada</p>
-    <!-- Aviso modo offline (oculto por padrão) -->
-    <div id="offline-warn" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;margin-top:12px;font-size:12px;color:#166534">
-      <strong>💾 Modo local ativo</strong><br>
-      Todos os dados são salvos neste navegador e funcionam normalmente.<br>
-      <span style="font-size:11px;color:#15803d">Para acesso da equipe via link, publique no Netlify.</span>
-    </div>
-    <!-- Seletor de nome para modo offline -->
+    <!-- Seletor de nome para modo offline (oculto por padrão) -->
     <div id="offline-login" style="display:none;margin-top:14px;border-top:1px solid #e2e8f0;padding-top:14px">
-      <div style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px">Modo local — selecione seu nome:</div>
-      <select id="ln-offline" style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;font-family:'Inter',sans-serif">
-        <option value="">Selecione...</option>
-        <option value="admin">Liliane (Admin)</option>
-        <option value="Patricia">Patricia (CLT)</option>
-        <option value="Cris Dantas">Cris Dantas (PJ)</option>
-        <option value="Evelyn">Evelyn (PJ)</option>
-        <option value="Pedro">Pedro (PJ)</option>
-        <option value="Monick">Monick (PJ)</option>
-        <option value="Milena">Milena (PJ)</option>
-        <option value="Beatriz">Beatriz (PJ)</option>
-        <option value="Rosicler">Rosicler (PJ)</option>
+      <div style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:8px">⚠️ Modo local — selecione seu nome:</div>
+      <select id="ln-offline" style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;margin-bottom:10px">
+        <option value="">— Selecione —</option>
+        <option value="admin">🔑 Liliane (Admin)</option>
+        <option value="Patricia">Patricia</option>
+        <option value="Cris Dantas">Cris Dantas</option>
+        <option value="Evelyn">Evelyn</option>
+        <option value="Pedro">Pedro</option>
+        <option value="Monick">Monick</option>
+        <option value="Milena">Milena</option>
+        <option value="Beatriz">Beatriz</option>
+        <option value="Rosicler">Rosicler</option>
       </select>
-      <button class="btn bp" style="width:100%;justify-content:center;padding:11px;font-size:14px;margin-top:10px" onclick="doLoginOffline()">Entrar (modo local)</button>
+      <input type="password" id="ln-pass" placeholder="Senha" style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;margin-bottom:10px;box-sizing:border-box"
+        onkeydown="if(event.key==='Enter')doLoginOffline()">
+      <button onclick="doLoginOffline()" style="width:100%;background:#64748b;color:#fff;border:none;border-radius:8px;padding:9px;font-size:13px;font-weight:600;cursor:pointer">
+        Entrar (modo local)
+      </button>
     </div>
   </div>
 </div>
@@ -355,6 +354,12 @@ nav{flex:1;padding:10px 8px;overflow-y:auto}
         window.__fbAuth=firebase.auth();
         window.__fbDb=firebase.firestore();
         window.__fbRtdb=firebase.database(); // Realtime Database para sync em tempo real
+        // Login anônimo automático para acessar o RTDB sem precisar de conta
+        window.__fbAuth.signInAnonymously().catch((err)=>{
+          // Se falhar (Auth não habilitado), NÃO marcar como offline
+          // O Firestore ainda pode funcionar com regras públicas
+          console.warn('[Firebase] signInAnonymously falhou:', err.code, '— continuando sem auth anônimo');
+        });
       }catch(e){ window.__fbReady=false; }
     }
     if(window.__fbOnReady) window.__fbOnReady();
@@ -418,10 +423,14 @@ function canSeeValores(){
   return r==='admin' || r==='financeiro' || r==='master' || n.includes('liliane') || n.includes('danielle');
 }
 function isMaster(){
-  // Apenas Liliane (master) pode editar/excluir dados financeiros
+  // Liliane Soares é a usuária master — acesso total sem restrições
   const r = S.user?.role;
   const n = (S.user?.name||'').toLowerCase();
-  return r==='master' || (r==='admin' && n.includes('liliane'));
+  const e = (S.user?.email||'').toLowerCase();
+  return r==='master'
+    || e==='lilianesoares@rhf.com.br'
+    || e==='lilianesoares80@gmail.com'
+    || (r==='admin' && (n.includes('liliane') || e.includes('liliane')));
 }
 function canEditFinanceiro(){
   return isMaster();
@@ -433,18 +442,12 @@ function canEditFinanceiro(){
 // ① DOMÍNIO: CANDIDATOS — Validações e permissões
 // ──────────────────────────────────────────────────────────────────────
 function podeEditarCandidato(c){
-  // Master pode editar qualquer candidato
-  if(isMaster()) return true;
-  // Outros NÃO podem editar candidatos já APROVADOS
-  if((c?.result||'')==='APROVADO') return false;
+  // Todos podem editar candidatos — sem restrição por status
   return true;
 }
 
 function podeAlterarStatus(c, novoStatus){
-  // Master pode alterar qualquer status
-  if(isMaster()) return true;
-  // Não pode alterar candidato já APROVADO
-  if((c?.result||'')==='APROVADO') return false;
+  // Todos podem alterar status — sem restrição
   return true;
 }
 
@@ -1015,23 +1018,13 @@ const SEED_J=[
 
 // ═══ SEED CANDIDATES (com phone) ═══
 const SEED_C=[
-  {id:'ca1',name:'Raab Neves',phone:'',jid:'j13',company:'Bender',rec:'Cris Dantas',parecer:'12/02/2026',ret:'16/02/2026',interview:'17/02 10h',attended:'SIM',result:'APROVADO',adm:'23/02/2026',obs:'Aprovada Reposição',month:2,year:2026},
-  {id:'ca2',name:'Rennan Aragão',phone:'',jid:'j5',company:'Fezer',rec:'Cris Dantas',parecer:'07/01/2026',ret:'10/01/2026',interview:'',attended:'SIM',result:'APROVADO',adm:'02/02/2026',obs:'',month:1,year:2026},
-  {id:'ca3',name:'Sidinei Rodrigues de Araújo',phone:'',jid:'j3',company:'Fezer',rec:'Cris Dantas',parecer:'30/01/2026',ret:'03/02/2026',interview:'09/02 9:30h',attended:'SIM',result:'APROVADO',adm:'20/02/2026',obs:'',month:1,year:2026},
-  {id:'ca4',name:'Kelvyn Pereira de Camargo',phone:'',jid:'j4',company:'Walsywa',rec:'Evelyn',parecer:'21/01/2026',ret:'24/01/2026',interview:'26/01 9h',attended:'SIM',result:'APROVADO',adm:'23/02/2026',obs:'Localidade e sem ensino médio',month:1,year:2026},
-  {id:'ca5',name:'Luiz Guilherme do Nascimento Santos',phone:'',jid:'j9',company:'Kether',rec:'Evelyn',parecer:'03/02/2026',ret:'06/02/2026',interview:'04/02 9h30',attended:'SIM',result:'APROVADO',adm:'11/02/2026',obs:'',month:2,year:2026},
-  {id:'ca6',name:'Everton Luiz da Silva Pinto',phone:'',jid:'j9',company:'Kether',rec:'Evelyn',parecer:'09/02/2026',ret:'12/02/2026',interview:'10/02 16h',attended:'SIM',result:'APROVADO',adm:'23/02/2026',obs:'',month:2,year:2026},
-  {id:'ca7',name:'Marcos Freire',phone:'',jid:'j15',company:'J&J',rec:'Pedro',parecer:'23/12/2025',ret:'26/12/2025',interview:'06/01 14h',attended:'SIM',result:'APROVADO',adm:'02/02/2025',obs:'',month:12,year:2025},
-  {id:'ca8',name:'Larissa Xavier',phone:'',jid:'j19',company:'Amore Di Gelato',rec:'Cris Dantas',parecer:'12/01/2026',ret:'15/01/2026',interview:'13/01 14h',attended:'SIM',result:'APROVADO',adm:'17/01/2026',obs:'',month:1,year:2026},
-  {id:'ca9',name:'Luciana Alves Gonçalves',phone:'',jid:'j9',company:'Kether Log',rec:'Evelyn',parecer:'20/01/2026',ret:'23/01/2026',interview:'21/01 17h',attended:'SIM',result:'APROVADO',adm:'27/01/2026',obs:'',month:1,year:2026},
-  {id:'ca10',name:'Irênio Paulino Silva',phone:'',jid:'j13',company:'Bender',rec:'Cris Dantas',parecer:'01/12/2025',ret:'04/12/2025',interview:'09/12 9h',attended:'SIM',result:'APROVADO',adm:'15/01/2025',obs:'',month:12,year:2025},
-  {id:'ca11',name:'Dietrich de Loyola',phone:'',jid:'j16',company:'J&J',rec:'Cris Dantas',parecer:'11/12/2025',ret:'14/12/2025',interview:'15/12 13:30',attended:'SIM',result:'APROVADO',adm:'06/01/2025',obs:'',month:12,year:2025},
-  {id:'ca12',name:'Heber da Ressurreição',phone:'',jid:'j16',company:'J&J',rec:'Cris Dantas',parecer:'15/12/2025',ret:'18/12/2025',interview:'16/12 13:30',attended:'SIM',result:'APROVADO',adm:'06/01/2025',obs:'',month:12,year:2025},
-  {id:'ca13',name:'Leandro Xavier',phone:'',jid:'j11',company:'MIG',rec:'Cris Dantas',parecer:'17/12/2025',ret:'20/12/2025',interview:'17/12 16h',attended:'SIM',result:'APROVADO',adm:'19/01/2025',obs:'',month:12,year:2025},
-  {id:'ca14',name:'Samuel Lima da Silva',phone:'556299337965',jid:'j11',company:'MIG',rec:'Evelyn',parecer:'11/12/2025',ret:'14/12/2025',interview:'15/12 14h30',attended:'SIM',result:'APROVADO',adm:'19/01/2025',obs:'',month:12,year:2025},
-  {id:'ca15',name:'Yan Patrick Felizardo',phone:'554797232847',jid:'j11',company:'MIG',rec:'Evelyn',parecer:'17/12/2025',ret:'20/12/2025',interview:'18/12 9h',attended:'SIM',result:'APROVADO',adm:'12/01/2025',obs:'',month:12,year:2025},
-  {id:'ca16',name:'Fernando Guedes',phone:'',jid:'j29',company:'Auto Center',rec:'Patricia',parecer:'08/01/2026',ret:'11/01/2026',interview:'09/01 10h',attended:'SIM',result:'APROVADO',adm:'13/01/2026',obs:'',month:1,year:2026},
-  {id:'ca17',name:'Naiara Oliveira',phone:'',jid:'j18',company:'Universal Truck',rec:'Patricia',parecer:'16/12/2025',ret:'19/12/2025',interview:'17/12 16h',attended:'SIM',result:'APROVADO',adm:'21/01/2025',obs:'',month:12,year:2025},
+  // ── NOTA: ca1–ca17 REMOVIDOS ──────────────────────────────────────────────────
+  // Esses registros foram removidos pois apontavam para IDs de vagas reutilizados
+  // (j3,j4,j5,j9,j11,j13,j15,j18,j19,j29 hoje são vagas completamente diferentes).
+  // Todos os candidatos correspondentes já existem corretamente nas entradas ca63+
+  // com finStatus:'Pago' e dados financeiros completos. Manter esses phantoms causava
+  // duplicatas infinitas no financeiro (inadimplentes falsos) mesmo após exclusão manual.
+  // ──────────────────────────────────────────────────────────────────────────────
   // Desistentes notáveis
   {id:'ca50',name:'Diozer Cardozo Ramos',phone:'',jid:'j4',company:'Fezer',rec:'Cris Dantas',parecer:'23/02/2026',ret:'26/02/2026',interview:'',attended:'',result:'Desistente',adm:'',obs:'Pretensão salarial maior',month:2,year:2026},
   {id:'ca51',name:'Juvenal Vieira Menezes Neto',phone:'5575E+11',jid:'j11',company:'MIG',rec:'Evelyn',parecer:'11/12/2025',ret:'14/12/2025',interview:'15/12 tel.',attended:'SIM',result:'Desistente',adm:'',obs:'Proposta realizada 3x — não dá continuidade',month:12,year:2025},
@@ -1364,6 +1357,47 @@ window.addEventListener('beforeunload', ()=>{
 });
 
 // Carrega dados da nuvem e sincroniza com localStorage
+// ── IDs de registros fantasmas removidos do SEED — nunca devem voltar ──────────
+const _PHANTOM_IDS = new Set([
+  'ca1','ca2','ca3','ca4','ca5','ca6','ca7','ca8','ca9','ca10',
+  'ca11','ca12','ca13','ca14','ca15','ca16','ca17'
+]);
+
+// ── Deduplicar array de candidatos por id e por nome+jid ────────────────
+function _dedupCandidatos(arr){
+  if(!Array.isArray(arr)) return arr;
+  // 0ª passagem: remover IDs fantasmas conhecidos
+  const semPhantoms = arr.filter(c => !_PHANTOM_IDS.has(c.id));
+  // 1ª passagem: dedup por id (mantém primeiro)
+  const seenId = new Set();
+  const byId = semPhantoms.filter(c=>{ if(seenId.has(c.id)) return false; seenId.add(c.id); return true; });
+  // 2ª passagem: dedup por nome normalizado + vaga (mantém o com mais dados)
+  const grupos = {};
+  byId.forEach(c=>{
+    const chave = (c.name||'').trim().toLowerCase()+'|'+(c.jid||'');
+    if(!grupos[chave]) grupos[chave]=[];
+    grupos[chave].push(c);
+  });
+  const result = [];
+  Object.values(grupos).forEach(g=>{
+    if(g.length===1){ result.push(g[0]); return; }
+    // Pontuar: priorizar Pago > APROVADO > adm > parecerTexto > phone
+    const scored = g.map(c=>({c, pts:
+      (c.finStatus==='Pago'?8:0)+
+      (c.result==='APROVADO'?5:0)+
+      (c.adm?3:0)+
+      (c.parecerTexto?2:0)+
+      (c.phone?2:0)+
+      (c.interview?1:0)+
+      (c.obs?1:0)
+    }));
+    scored.sort((a,b)=>b.pts-a.pts);
+    result.push(scored[0].c);
+    if(g.length>1) console.log('[dedup] removida(s) '+(g.length-1)+' duplicata(s) de "'+g[0].name+'" na vaga '+g[0].jid);
+  });
+  return result;
+}
+
 async function loadDataCloud(){
   const keys = ['jobs','candidates','clients','prizes','recruiters'];
   let anyCloud = false;
@@ -1371,28 +1405,35 @@ async function loadDataCloud(){
     try{
       const cloudData = await loadCloud(k);
       if(cloudData && Array.isArray(cloudData) && cloudData.length > 0){
-        // Comparar: usar o que tiver MAIS registros (proteção contra perda de dados)
-        const localData = S[k] || [];
-        if(cloudData.length >= localData.length){
-          // Nuvem tem pelo menos o mesmo tanto — usar nuvem
-          S[k] = cloudData;
-          LS.set(k, cloudData);
+        // Para candidatos: SEMPRE deduplicar antes de comparar/aceitar
+        const cleanCloud = k==='candidates' ? _dedupCandidatos(cloudData) : cloudData;
+        const cleanLocal = k==='candidates' ? _dedupCandidatos(S[k]||[]) : (S[k]||[]);
+        // Comparar tamanhos APÓS deduplicação (evita aceitar nuvem inflada de duplicatas)
+        if(cleanCloud.length >= cleanLocal.length){
+          S[k] = cleanCloud;
+          LS.set(k, cleanCloud);
+          // Se a nuvem tinha duplicatas, re-salvar já limpa
+          if(k==='candidates' && cleanCloud.length < cloudData.length){
+            console.log('[loadDataCloud] Nuvem tinha '+(cloudData.length-cleanCloud.length)+' duplicatas — re-salvando limpa');
+            saveCloud(k, cleanCloud);
+          }
         } else {
-          // Local tem mais dados — provavelmente foi editado offline
-          // Manter local E forçar re-sync para nuvem
-          console.log('[loadDataCloud] Local tem mais dados que nuvem para '+k+': local='+localData.length+' cloud='+cloudData.length+'. Mantendo local e re-sincronizando...');
-          saveCloud(k, localData); // re-sync local → nuvem
+          // Local tem mais dados — manter local E forçar re-sync para nuvem
+          console.log('[loadDataCloud] Local tem mais dados que nuvem para '+k+': local='+cleanLocal.length+' cloud='+cleanCloud.length+'. Mantendo local e re-sincronizando...');
+          S[k] = cleanLocal;
+          LS.set(k, cleanLocal);
+          saveCloud(k, cleanLocal); // re-sync local → nuvem
         }
         anyCloud = true;
       } else if(cloudData !== null){
-        S[k] = cloudData;
-        LS.set(k, cloudData);
+        S[k] = k==='candidates' ? _dedupCandidatos(cloudData) : cloudData;
+        LS.set(k, S[k]);
         anyCloud = true;
       }
     } catch(e){ console.warn('loadDataCloud erro em '+k+':', e.message); }
   }
   if(anyCloud){
-    console.log('✅ Dados carregados da nuvem (Firestore)');
+    console.log('✅ Dados carregados da nuvem (Firestore) — vagas:'+S.jobs.length+' candidatos:'+S.candidates.length);
     // Sincronizar resultados DISC do Firestore
     try{
       const discSnap = await db.collection('disc_results').get();
@@ -1407,16 +1448,20 @@ async function loadDataCloud(){
             discRespondidoEm: d.respondidoEm ? new Date(d.respondidoEm).toLocaleDateString('pt-BR') : c.discRespondidoEm
           }:c);
         });
-        save('candidates'); // persistir resultados DISC
-        console.log('[IntegraVagas] ✅ Resultados DISC sincronizados e salvos');
+        save('candidates');
       }
     }catch(e){ console.warn('DISC sync:', e.message); }
-    // Re-renderizar a tela atual
-    const tabs = ['dashboard','vagas','candidatos','clientes','financeiro','recrutadoras'];
-    for(const t of tabs){
-      const pg = document.getElementById('pg-'+t);
-      if(pg && pg.style.display !== 'none'){
-        setTab(t); break;
+    // Sempre re-renderizar após carregar da nuvem (garante dados atualizados na tela)
+    if(S.tab && typeof render === 'function'){
+      try{ render(S.tab); } catch(e){}
+    } else {
+      // Fallback: re-renderizar tela visível
+      const tabs = ['dashboard','vagas','candidatos','clientes','financeiro','recrutadoras'];
+      for(const t of tabs){
+        const pg = document.getElementById('pg-'+t);
+        if(pg && pg.style.display !== 'none'){
+          try{ render(t); } catch(e){} break;
+        }
       }
     }
   }
@@ -6764,7 +6809,11 @@ function sincronizarSeed(){
   
   if(novosJ.length || novosC.length || novosCl.length){
     if(novosJ.length)  { S.jobs=[...S.jobs,...novosJ];       LS.set('jobs',S.jobs); }
-    if(novosC.length)  { S.candidates=[...S.candidates,...novosC]; LS.set('candidates',S.candidates); }
+    if(novosC.length)  {
+      const merged = [...S.candidates,...novosC];
+      S.candidates = _dedupCandidatos(merged);
+      LS.set('candidates',S.candidates);
+    }
     if(novosCl.length) { S.clients=[...S.clients,...novosCl]; LS.set('clients',S.clients); }
     // Atualizar recrutadoras do SEED PRESERVANDO taxas personalizadas do usuário
     const _storedRecs = LS.get('recruiters')||[];
@@ -7008,56 +7057,152 @@ window.__fbOnReady = function(){
 if(window.__fbPendingReady){ window.__fbPendingReady=false; window.__fbOnReady(); }
 
 function setupAuthListener(){
-  if(setupAuthListener._called) return; // evitar chamada dupla
+  if(setupAuthListener._called) return;
   setupAuthListener._called = true;
-  // Modo offline/local: Firebase não carregou — usar login simples
-  if(window.__fbOffline || !auth){
-    // Verificar sessão salva no localStorage
+
+  if(auth && !window.__fbOffline){
+    // Firebase Auth disponível — usar email/senha
+    auth.onAuthStateChanged(async (firebaseUser)=>{
+      if(firebaseUser){
+        try{ S.user = await loadUserProfile(firebaseUser); }
+        catch(e){ S.user = _profileFromEmail(firebaseUser.email, firebaseUser.uid); }
+        LS.set('session', S.user);
+        showApp();
+        setTimeout(()=>iniciarSyncRealtime(firebaseUser.uid), 1500);
+      } else {
+        // Sem usuário Firebase autenticado
+        // MAS o Firebase está disponível — buscar dados da nuvem mesmo assim
+        const saved = LS.get('session');
+        if(saved && saved.name){
+          // Mostrar tela de sessão E sincronizar dados em background
+          showSessionConfirm(saved);
+          // Buscar dados do Firestore mesmo sem auth (regras públicas de leitura)
+          setTimeout(async ()=>{
+            try{
+              await loadDataCloud();
+              console.log('[Auth] Dados sincronizados da nuvem sem autenticação');
+            } catch(e){
+              console.warn('[Auth] Sync sem auth falhou:', e.message);
+            }
+          }, 1000);
+        } else {
+          document.getElementById('login-page').style.display='flex';
+          document.getElementById('app').style.display='none';
+        }
+      }
+    });
+  } else {
+    // Modo local (Firebase indisponível)
     const saved = LS.get('session');
-    if(saved && saved.name){
-      // Mostrar quem está salvo e pedir confirmação
+    // Se estiver rodando via file://, mostrar aviso de hospedagem
+    if(window.location.protocol === 'file:'){
+      setTimeout(()=>_mostrarAvisoFileProtocol(), 300);
+    } else if(saved && saved.name){
       showSessionConfirm(saved);
     } else {
       showLoginOffline();
     }
-    return;
   }
-  // Modo online: Firebase carregou
-  auth.onAuthStateChanged(async (firebaseUser) => {
-    if (firebaseUser) {
-      try { S.user = await loadUserProfile(firebaseUser); }
-      catch(e){
-        S.user={uid:firebaseUser.uid,email:firebaseUser.email,
-          name:firebaseUser.email.split('@')[0],role:'recruiter',recId:null};
-      }
-      LS.set('session', S.user);
-      showApp();
-    } else {
-      document.getElementById('app').style.display='none';
-      document.getElementById('login-page').style.display='flex';
-    }
-  });
 }
+
+// Mapear email para perfil quando não está no Firestore
+function _profileFromEmail(email, uid){
+  const MAP = {
+    'lilianesoares@rhf.com.br':  {name:'Liliane',    role:'admin'},
+    'lilassoares80@gmail.com':   {name:'Liliane',    role:'admin'},
+    'lilianesoares80@gmail.com': {name:'Liliane',    role:'admin'},
+    'patricia@rhf.com.br':       {name:'Patricia',   role:'clt'},
+    'cris@rhf.com.br':           {name:'Cris Dantas',role:'clt'},
+    'crisdantas@rhf.com.br':     {name:'Cris Dantas',role:'clt'},
+    'evelyn@rhf.com.br':         {name:'Evelyn',     role:'clt'},
+    'pedro@rhf.com.br':          {name:'Pedro',      role:'pj'},
+    'monick@rhf.com.br':         {name:'Monick',     role:'pj'},
+    'milena@rhf.com.br':         {name:'Milena',     role:'pj'},
+    'beatriz@rhf.com.br':        {name:'Beatriz',    role:'pj'},
+    'rosicler@rhf.com.br':       {name:'Rosicler',   role:'pj'},
+    'danielle@rhf.com.br':       {name:'Danielle',   role:'admin'},
+    'rhfpicarrassc@gmail.com':   {name:'RHF Admin',  role:'admin'},
+  };
+  const p = MAP[email.toLowerCase()] || {name:email.split('@')[0], role:'recruiter'};
+  return {uid, email, name:p.name, role:p.role, recId:null};
+}
+
 
 function showApp(){
   document.getElementById('login-page').style.display='none';
   document.getElementById('app').style.display='flex';
-  loadData();
-  // Iniciar sincronização em tempo real entre dispositivos
-  setTimeout(()=>{
-    const uid = S.user?.uid || S.user?.email || 'rhf-default';
-    iniciarSyncRealtime(uid);
-    console.log('[IntegraVagas] Sync iniciado para usuário:', S.user?.name||uid);
-  }, 1500);
-  // Verificar followups 2s após login
+
+  // Se Firebase disponível, SEMPRE sincronizar com a nuvem
+  // (independente de ter dados locais ou não)
+  const temDadosLocais = !!(LS.get('candidates') && LS.get('candidates').length > 50);
+
+  if(!window.__fbOffline && !temDadosLocais){
+    // Perfil novo/sem dados — mostrar loading e aguardar nuvem
+    const content = document.getElementById('content');
+    if(content){
+      content.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:20px">
+          <div style="width:48px;height:48px;border:4px solid #e2e8f0;border-top-color:#E85D1E;border-radius:50%;animation:spin 1s linear infinite"></div>
+          <div style="text-align:center">
+            <div style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:4px">Carregando dados do servidor...</div>
+            <div style="font-size:13px;color:#64748b">Sincronizando vagas e candidatos</div>
+          </div>
+        </div>`;
+    }
+    loadData();
+    setTimeout(async ()=>{
+      const uid = S.user?.uid || S.user?.email || 'rhf-default';
+      iniciarSyncRealtime(uid);
+      try{ await loadDataCloud(); } catch(e){ console.warn('Cloud load error:', e); }
+      buildNav(); setTab('dashboard');
+    }, 800);
+  } else {
+    // Tem dados locais — carregar imediatamente
+    loadData();
+    buildNav(); setTab('dashboard');
+    // Sincronizar com a nuvem em background SEMPRE (dados locais podem estar desatualizados)
+    setTimeout(async ()=>{
+      const uid = S.user?.uid || S.user?.email || 'rhf-default';
+      if(!window.__fbOffline){
+        iniciarSyncRealtime(uid);
+        try{
+          await loadDataCloud();
+          // Re-renderizar a tela atual com dados atualizados
+          if(S.tab) try{ render(S.tab); }catch(e){}
+          // Remover banner de modo local se ainda existir
+          const banner = document.getElementById('offline-app-banner');
+          if(banner){ banner.remove(); document.getElementById('app').style.paddingTop=''; }
+        } catch(e){ console.warn('Background sync error:', e); }
+      }
+    }, 1500);
+  }
+
+  // Aviso de modo local
+  if(window.__fbOffline){
+    setTimeout(()=>{
+      let banner = document.getElementById('offline-app-banner');
+      if(!banner){
+        banner = document.createElement('div');
+        banner.id = 'offline-app-banner';
+        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10001;background:linear-gradient(135deg,#92400e,#b45309);color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.2)';
+        banner.innerHTML = '<span>⚠️ Modo local — dados podem estar desatualizados. Verifique sua conexão com a internet.</span>'
+          +'<button onclick="window.location.reload()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:20px;padding:5px 14px;font-size:12px;cursor:pointer;font-weight:700;font-family:Inter,sans-serif;white-space:nowrap">🔄 Reconectar</button>';
+        document.body.appendChild(banner);
+        const app = document.getElementById('app');
+        if(app) app.style.paddingTop = '44px';
+      }
+    }, 500);
+  }
+
+  // Verificar followups
   setTimeout(()=>{
     if(S.user&&(S.user.role==='admin'||S.user.role==='comercial')) verificarFollowupsVencidos();
-  },2000);
+  }, 3000);
+
   document.getElementById('ub').innerHTML=
     (S.user.role==='admin'?'🔑 ':S.user.role==='comercial'?'💼 ':'👤 ')+S.user.name+
     '<br><span style="font-size:10px;opacity:.7">'+(S.user.email||'')+'</span>';
-  buildNav(); setTab('dashboard');
-  // Mostrar papel do usuário no rodapé da sidebar
+
   const roleBadge = document.getElementById('user-role-badge');
   if(roleBadge){
     const roleNames = {admin:'🔑 Administrador',clt:'👔 Rec. CLT',recruiter:'👤 Rec. PJ',comercial:'💼 Comercial'};
@@ -7107,10 +7252,14 @@ function showSessionConfirm(saved){
         <button onclick="continuarSessao()" style="width:100%;padding:12px;background:#E85D1E;color:#fff;border:none;border-radius:10px;font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer">
           Continuar como ${saved.name.split(' ')[0]}
         </button>
+        <button onclick="tentarReconectar()" style="width:100%;padding:12px;background:#f0fdf4;color:#166534;border:1.5px solid #bbf7d0;border-radius:10px;font-family:Inter,sans-serif;font-weight:600;font-size:14px;cursor:pointer">
+          🔄 Reconectar ao servidor e sincronizar dados
+        </button>
         <button onclick="trocarUsuario()" style="width:100%;padding:12px;background:#f8fafc;color:#475569;border:1.5px solid #e2e8f0;border-radius:10px;font-family:Inter,sans-serif;font-weight:600;font-size:14px;cursor:pointer">
           Trocar usuário
         </button>
       </div>
+      <div id="reconnect-status" style="margin-top:12px;font-size:12px;color:#64748b"></div>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -7119,6 +7268,13 @@ function showSessionConfirm(saved){
     document.getElementById('session-confirm')?.remove();
     S.user = saved;
     showApp();
+  };
+
+  window.tentarReconectar = function(){
+    const st = document.getElementById('reconnect-status');
+    if(st) st.innerHTML = '⏳ Tentando conectar ao servidor...';
+    // Recarregar a página — o Firebase vai tentar carregar novamente
+    setTimeout(()=>{ window.location.reload(); }, 500);
   };
 
   window.trocarUsuario = function(){
@@ -7154,6 +7310,82 @@ function doLoginOffline(){
 // Estrutura: { uid: { name, role, recId } }
 // role: 'admin' | 'recruiter' | 'comercial'
 
+function _mostrarAvisoFileProtocol(){
+  const loginPage = document.getElementById('login-page');
+  if(!loginPage) return;
+  // Remover aviso anterior se existir
+  document.getElementById('file-protocol-warn')?.remove();
+
+  const div = document.createElement('div');
+  div.id = 'file-protocol-warn';
+  div.style.cssText = 'position:fixed;inset:0;background:linear-gradient(135deg,#1A4B8F,#0f2d5c);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px';
+  div.innerHTML = `
+    <div style="background:#fff;border-radius:20px;padding:32px 36px;width:100%;max-width:520px;box-shadow:0 30px 80px rgba(0,0,0,.4)">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:48px;margin-bottom:8px">⚠️</div>
+        <h2 style="font-size:20px;font-weight:800;color:#1e293b;margin-bottom:6px">Arquivo aberto localmente</h2>
+        <p style="font-size:13px;color:#64748b;line-height:1.6">
+          O CRM está sendo aberto diretamente do computador (<code style="background:#f1f5f9;padding:1px 6px;border-radius:4px;font-size:12px">file://</code>).
+          Nesse modo, a conexão com o servidor Firebase <strong>não funciona</strong> e os dados ficam desatualizados.
+        </p>
+      </div>
+
+      <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px">✅ Solução: publicar no Netlify (gratuito, 2 minutos)</div>
+        <div style="font-size:12px;color:#166534;line-height:2">
+          <div><strong>1.</strong> Acesse <a href="https://app.netlify.com/drop" target="_blank" style="color:#1A4B8F;font-weight:700">app.netlify.com/drop</a></div>
+          <div><strong>2.</strong> Arraste o arquivo <code style="background:#dcfce7;padding:1px 5px;border-radius:3px">index.html</code> para a página</div>
+          <div><strong>3.</strong> Aguarde ~10 segundos — Netlify gera um link</div>
+          <div><strong>4.</strong> Abra o link gerado — Firebase conecta automaticamente ✅</div>
+        </div>
+        <a href="https://app.netlify.com/drop" target="_blank"
+          style="display:block;margin-top:12px;background:#166534;color:#fff;text-align:center;padding:10px;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none">
+          🚀 Abrir Netlify Drop
+        </a>
+      </div>
+
+      <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:14px 16px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:6px">📥 Alternativa: importar backup salvo</div>
+        <div style="font-size:12px;color:#1e40af;margin-bottom:10px">Se você tem um arquivo de backup <code>.json</code>, importe-o para recuperar todos os dados localmente.</div>
+        <label style="display:block;background:#1e40af;color:#fff;text-align:center;padding:9px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer">
+          📂 Importar backup .json
+          <input type="file" accept=".json" style="display:none" onchange="_importarBackupFileProtocol(this)">
+        </label>
+      </div>
+
+      <button onclick="document.getElementById('file-protocol-warn').remove();showLoginOffline()"
+        style="width:100%;padding:10px;background:#f8fafc;color:#64748b;border:1.5px solid #e2e8f0;border-radius:10px;font-family:Inter,sans-serif;font-weight:600;font-size:13px;cursor:pointer">
+        Continuar assim mesmo (dados locais apenas)
+      </button>
+    </div>
+  `;
+  document.body.appendChild(div);
+}
+
+window._importarBackupFileProtocol = function(input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    try{
+      const data = JSON.parse(ev.target.result);
+      if(!data.jobs || !data.candidates){
+        alert('Arquivo inválido — não é um backup RHF.'); return;
+      }
+      if(data.jobs)       { S.jobs       = data.jobs;       LS.set('jobs', S.jobs); }
+      if(data.candidates) { S.candidates = _dedupCandidatos(data.candidates); LS.set('candidates', S.candidates); }
+      if(data.clients)    { S.clients    = data.clients;    LS.set('clients', S.clients); }
+      if(data.prizes)     { S.prizes     = data.prizes;     LS.set('prizes', S.prizes); }
+      if(data.recruiters) { S.recruiters = data.recruiters; LS.set('recruiters', S.recruiters); }
+      document.getElementById('file-protocol-warn')?.remove();
+      alert('✅ Backup importado com sucesso! ' + data.candidates.length + ' candidatos e ' + data.jobs.length + ' vagas carregados.');
+      showLoginOffline();
+    } catch(err){
+      alert('Erro ao ler arquivo: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+};
+
 // ═══ LOGIN ═══
 async function doLogin(){
   const email = document.getElementById('lemail').value.trim();
@@ -7166,7 +7398,12 @@ async function doLogin(){
     err.textContent = 'Firebase indisponível. Use o seletor de nome abaixo.';
     err.style.display = 'block';
     setTimeout(()=>err.style.display='none', 4000);
-    showLoginOffline();
+    // Mostrar instrução de hospedagem se estiver em file://
+    if(window.location.protocol === 'file:'){
+      _mostrarAvisoFileProtocol();
+    } else {
+      showLoginOffline();
+    }
     return;
   }
 
@@ -7304,8 +7541,25 @@ let _ignorarProxima = {}; // Evitar loop: minha própria escrita triggerando ren
 // Iniciar sincronização em tempo real após login
 function iniciarSyncRealtime(uid){
   const rtdb = window.__fbRtdb;
-  if(!rtdb || !uid){ console.warn('[Sync] RTDB não disponível'); return; }
+  if(!rtdb){ console.warn('[Sync] RTDB não disponível'); return; }
   if(_rtdbSyncAtivo){ console.log('[Sync] Já ativo'); return; }
+
+  // Garantir login anônimo no Firebase Auth antes de usar o RTDB
+  const auth = window.__fbAuth;
+  if(auth && !auth.currentUser){
+    auth.signInAnonymously()
+      .then(()=>{ _iniciarListenersRTDB(uid); })
+      .catch(e=>{
+        console.warn('[Sync] Auth anônimo falhou, tentando direto:', e.code);
+        _iniciarListenersRTDB(uid);
+      });
+  } else {
+    _iniciarListenersRTDB(uid);
+  }
+}
+
+function _iniciarListenersRTDB(uid){
+  const rtdb = window.__fbRtdb;
   _rtdbUID = uid;
   _rtdbSyncAtivo = true;
 
@@ -7325,12 +7579,21 @@ function iniciarSyncRealtime(uid){
       const arr = Array.isArray(data) ? data : Object.values(data);
       if(!arr || arr.length===0) return;
 
-      // Só atualizar se for diferente (evitar re-render desnecessário)
-      if(JSON.stringify(S[k])===JSON.stringify(arr)) return;
+      // Para candidatos: deduplicar e purgar fantasmas antes de aceitar
+      const arrLimpo = k==='candidates' ? _dedupCandidatos(arr) : arr;
 
-      console.log('[Sync] '+k+' atualizado pela nuvem: '+arr.length+' itens');
-      S[k] = arr;
-      LS.set(k, arr); // Atualizar localStorage também
+      // Só atualizar se for diferente (evitar re-render desnecessário)
+      if(JSON.stringify(S[k])===JSON.stringify(arrLimpo)) return;
+
+      console.log('[Sync] '+k+' atualizado pela nuvem: '+arrLimpo.length+' itens'+(arr.length!==arrLimpo.length?' ('+( arr.length-arrLimpo.length)+' duplicatas removidas)':''));
+      S[k] = arrLimpo;
+      LS.set(k, arrLimpo); // Atualizar localStorage também
+
+      // Se havia duplicatas na nuvem, re-salvar já limpo
+      if(k==='candidates' && arr.length !== arrLimpo.length){
+        saveCloud(k, arrLimpo);
+        saveRtdb(k, arrLimpo);
+      }
 
       // Re-renderizar a tela atual se relevante
       const pg = document.getElementById('pg-'+S.tab);
@@ -7435,22 +7698,21 @@ function loadData(){
     S.candidates = SEED_C.map(c=>({...c}));
     LS.set('candidates', S.candidates);
   } else {
-    // Deduplicar + normalizar result
-    const seen = new Set();
-    const dedup = rawCands.filter(c=>{ if(seen.has(c.id))return false;seen.add(c.id);return true; })
-      .map(c=>{
-        // Normalizar 'Aprovado' → 'APROVADO'
-        if(c.result && c.result.toLowerCase()==='aprovado' && c.result!=='APROVADO')
-          return {...c, result:'APROVADO'};
-        return c;
-      });
+    // Normalizar result: 'Aprovado' → 'APROVADO'
+    const normalized = rawCands.map(c=>{
+      if(c.result && c.result.toLowerCase()==='aprovado' && c.result!=='APROVADO')
+        return {...c, result:'APROVADO'};
+      return c;
+    });
+    // Dedup completa: por id E por nome+vaga (elimina duplicatas que voltam do cloud)
+    const dedup = _dedupCandidatos(normalized);
     const ids = new Set(dedup.map(c=>c.id));
     const novos = SEED_C.filter(c=>!ids.has(c.id));
-    S.candidates = [...dedup, ...novos];
-    if(dedup.length!==rawCands.length || novos.length)
+    S.candidates = _dedupCandidatos([...dedup, ...novos]);
+    if(S.candidates.length !== rawCands.length){
       LS.set('candidates', S.candidates);
-    if(dedup.length!==rawCands.length)
-      console.log('[IntegraVagas] '+(rawCands.length-dedup.length)+' candidatos duplicados removidos');
+      console.log('[IntegraVagas] '+(rawCands.length - S.candidates.length)+' candidatos duplicados removidos no carregamento');
+    }
   }
 
   // ── Clientes ───────────────────────────────────────────────────────
@@ -7483,6 +7745,18 @@ function loadData(){
 
   S.prizes     = LS.get('prizes')  || [];
   S.apiKey     = LS.get('apiKey')  || '';
+
+  // ── Purgar IDs fantasmas conhecidos (removidos do SEED por duplicidade) ──────
+  // ca1-ca17 foram registros com IDs de vagas reutilizados — causavam duplicatas
+  // infinitas no financeiro. Forçar remoção mesmo se ainda estiverem no localStorage.
+  const _antesPhantom = S.candidates.length;
+  S.candidates = S.candidates.filter(c => !_PHANTOM_IDS.has(c.id));
+  if(S.candidates.length < _antesPhantom){
+    LS.set('candidates', S.candidates);
+    console.log('[IntegraVagas] Purgados '+ (_antesPhantom - S.candidates.length) +' registros fantasmas (ca1-ca17)');
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+
   console.log('[IntegraVagas] dados carregados — vagas:'+S.jobs.length+' candidatos:'+S.candidates.length+' clientes:'+S.clients.length);
   // Depois sincroniza com a nuvem em background
   setTimeout(()=>loadDataCloud(), 1500);
@@ -8723,6 +8997,7 @@ function renderCandidatos(el){
       `:''}
       ${(S.user.role!=="comercial")?'<button class="btn bp bsm" onclick="openAddCand()">+ Novo candidato</button>':''}
       ${S.user.role==='admin'?'<button class="btn bsm" style="background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe" onclick="importarCandidatosPublicos()">📥 Cadastros públicos</button>':''}
+      ${(isMaster()||PERMS.isSupervisor(S.user.role))?'<button class="btn bsm" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer" onclick="removerDuplicatasCandidatos()" title="Detectar e remover candidatos duplicados (mesmo nome + mesma vaga)">🧹 Remover duplicatas</button>':''}
     </div>
   </div>
   <div class="fl">
@@ -9177,7 +9452,7 @@ function renderFinanceiro(el){
   el.innerHTML=`
   <div class="tb"><h1 class="pt">Financeiro</h1></div>
   <div style="display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap">
-    ${[['resumo','📊 Resumo'],['faturamento','💰 Faturamento'],['clientes','🏢 Clientes'],['provisao','📋 Projeção & Provisão'],['royalties','👑 Royalties'],['premios','🏆 Prêmios'],['gestao','📒 Gestão Financeira'],['metas','🎯 Metas']].map(([id,label])=>`<button class="ft ${ft===id?'act':''}" onclick="S.finTab='${id}';renderFinanceiro(document.getElementById('pg-financeiro'))" style="white-space:nowrap">${label}</button>`).join('')}
+    ${[['resumo','📊 Resumo'],['faturamento','💰 Faturamento'],['clientes','🏢 Clientes'],['provisao','📋 Projeção & Provisão'],['royalties','👑 Royalties'],['premios','🏆 Prêmios'],['gestao','📒 Gestão Financeira'],['metas','🎯 Metas'],['servicos','🛠️ Serviços']].map(([id,label])=>`<button class="ft ${ft===id?'act':''}" onclick="S.finTab='${id}';renderFinanceiro(document.getElementById('pg-financeiro'))" style="white-space:nowrap">${label}</button>`).join('')}
   </div>
   <div>${renderFinBody(ft)}</div>`;
 }
@@ -10688,10 +10963,267 @@ function renderFinBody(ft){
     return renderMetasBody();
   }
 
+  if(ft==='servicos'){
+    return renderServicosBody();
+  }
+
   return'';
 }
 
 // ── Renderização da aba de Metas ──────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────
+// MÓDULO: SERVIÇOS EXTRAS — serviços fora de R&S com repasse de royalties
+// Exemplos: Avaliação DISC, Consultoria RH, Cargos & Salários, etc.
+// Royalties: R.FINANCEIRO.TAXA_ROYALTIES % sobre valor recebido
+// ──────────────────────────────────────────────────────────────────────
+function renderServicosBody(){
+  if(!canSeeValores()) return '<div style="padding:20px;color:#dc2626;background:#fee2e2;border-radius:10px">🔒 Acesso restrito.</div>';
+
+  // Carregar serviços do localStorage
+  const servicos = LS.get('servicos_extras') || [];
+
+  // Filtros
+  const sMes = S.servicosMes || '';
+  const sAno = S.servicosAno || String(new Date().getFullYear());
+  const MNOMES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  const filtrados = servicos.filter(s=>{
+    if(!s || !s.data) return false;
+    const p = s.data.split('/');
+    if(sMes && p[1]!==sMes) return false;
+    if(sAno && p[2]!==sAno) return false;
+    return true;
+  });
+
+  const totalRecebido = filtrados.filter(s=>s.status==='Pago').reduce((acc,s)=>acc+(s.valor||0),0);
+  const totalPendente = filtrados.filter(s=>s.status!=='Pago').reduce((acc,s)=>acc+(s.valor||0),0);
+  const totalRoyalties = totalRecebido * R.FINANCEIRO.TAXA_ROYALTIES / 100;
+  const fmtR = v => 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    <h2 style="font-size:18px;font-weight:700;margin:0">🛠️ Serviços Extras</h2>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select onchange="S.servicosMes=this.value;renderFinanceiro(document.getElementById('pg-financeiro'))"
+        style="border:1.5px solid #e2e8f0;border-radius:7px;padding:6px 10px;font-size:12px">
+        <option value="">Todos meses</option>
+        ${MNOMES.map((m,i)=>`<option value="${String(i+1).padStart(2,'0')}" ${String(i+1).padStart(2,'0')===sMes?'selected':''}>${m}</option>`).join('')}
+      </select>
+      <select onchange="S.servicosAno=this.value;renderFinanceiro(document.getElementById('pg-financeiro'))"
+        style="border:1.5px solid #e2e8f0;border-radius:7px;padding:6px 10px;font-size:12px">
+        ${['2025','2026','2027'].map(a=>`<option value="${a}" ${a===sAno?'selected':''}>${a}</option>`).join('')}
+      </select>
+      ${isMaster()?`<button onclick="abrirNovoServico()" style="background:#1A4B8F;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">+ Novo serviço</button>`:''}
+    </div>
+  </div>
+
+  <!-- CARDS DE RESUMO -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px">
+    <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:10px;padding:14px">
+      <div style="font-size:11px;font-weight:600;color:#166534;margin-bottom:4px">💰 RECEBIDO</div>
+      <div style="font-size:20px;font-weight:800;color:#16a34a">${fmtR(totalRecebido)}</div>
+      <div style="font-size:10px;color:#64748b">${filtrados.filter(s=>s.status==='Pago').length} serviço(s)</div>
+    </div>
+    <div style="background:#fefce8;border:2px solid #fde047;border-radius:10px;padding:14px">
+      <div style="font-size:11px;font-weight:600;color:#854d0e;margin-bottom:4px">⏳ PENDENTE</div>
+      <div style="font-size:20px;font-weight:800;color:#ca8a04">${fmtR(totalPendente)}</div>
+      <div style="font-size:10px;color:#64748b">${filtrados.filter(s=>s.status!=='Pago').length} serviço(s)</div>
+    </div>
+    <div style="background:#faf5ff;border:2px solid #d8b4fe;border-radius:10px;padding:14px">
+      <div style="font-size:11px;font-weight:600;color:#7c3aed;margin-bottom:4px">👑 ROYALTIES (${R.FINANCEIRO.TAXA_ROYALTIES}%)</div>
+      <div style="font-size:20px;font-weight:800;color:#7c3aed">${fmtR(totalRoyalties)}</div>
+      <div style="font-size:10px;color:#64748b">sobre valores pagos</div>
+    </div>
+  </div>
+
+  <!-- TABELA DE SERVIÇOS -->
+  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden">
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="background:#f8fafc">
+          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#64748b">DATA</th>
+          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#64748b">SERVIÇO</th>
+          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#64748b">CLIENTE</th>
+          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#64748b">TIPO</th>
+          <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:600;color:#64748b">VALOR</th>
+          <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:600;color:#7c3aed">ROYALTIES</th>
+          <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:600;color:#64748b">STATUS</th>
+          ${isMaster()?'<th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:600;color:#64748b">AÇÕES</th>':''}
+        </tr>
+      </thead>
+      <tbody>
+        ${filtrados.length===0?`<tr><td colspan="8" style="padding:24px;text-align:center;color:#94a3b8;font-size:13px">Nenhum serviço registrado no período.<br><br>${isMaster()?'<button onclick="abrirNovoServico()" style="background:#1A4B8F;color:#fff;border:none;border-radius:7px;padding:8px 14px;font-size:12px;cursor:pointer">+ Adicionar primeiro serviço</button>':''}</td></tr>`:
+        filtrados.sort((a,b)=>b.data.split('/').reverse().join('')-a.data.split('/').reverse().join('')).map(s=>{
+          const roy = (s.valor||0)*R.FINANCEIRO.TAXA_ROYALTIES/100;
+          const pago = s.status==='Pago';
+          return `<tr style="border-top:1px solid #f1f5f9;${pago?'':'background:#fffbeb'}">
+            <td style="padding:10px 12px;font-size:12px">${s.data||'—'}</td>
+            <td style="padding:10px 12px">
+              <div style="font-size:13px;font-weight:600">${s.descricao||'—'}</div>
+              ${s.obs?`<div style="font-size:10px;color:#94a3b8">${s.obs}</div>`:''}
+            </td>
+            <td style="padding:10px 12px;font-size:12px">${s.cliente||'—'}</td>
+            <td style="padding:10px 12px"><span style="background:#dbeafe;color:#1e40af;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:600">${s.tipo||'Outro'}</span></td>
+            <td style="padding:10px 12px;text-align:right;font-weight:700;font-size:13px">${fmtR(s.valor||0)}</td>
+            <td style="padding:10px 12px;text-align:right;font-size:12px;color:#7c3aed;font-weight:600">${pago?fmtR(roy):'—'}</td>
+            <td style="padding:10px 12px;text-align:center">
+              ${isMaster()?`<select data-sid="${s.id}" onchange="atualizarStatusServico(this.dataset.sid,this.value)"
+                style="border:1px solid #e2e8f0;border-radius:6px;padding:3px 6px;font-size:11px;background:${pago?'#f0fdf4':'#fefce8'}">
+                <option value="Pendente" ${!pago?'selected':''}>🟡 Pendente</option>
+                <option value="Pago" ${pago?'selected':''}>🟢 Pago</option>
+              </select>`:
+              `<span style="background:${pago?'#dcfce7':'#fef9c3'};color:${pago?'#166534':'#854d0e'};border-radius:12px;padding:3px 8px;font-size:10px;font-weight:700">${pago?'✅ Pago':'⏳ Pendente'}</span>`}
+            </td>
+            ${isMaster()?`<td style="padding:10px 12px;text-align:center">
+              <button data-sid="${s.id}" onclick="editarServico(this.dataset.sid)"
+                style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:5px;padding:3px 7px;font-size:11px;cursor:pointer;margin-right:4px" title="Editar">✏️</button>
+              <button data-sid="${s.id}" onclick="excluirServico(this.dataset.sid)"
+                style="background:#fee2e2;border:1px solid #fecaca;border-radius:5px;padding:3px 7px;font-size:11px;cursor:pointer;color:#dc2626" title="Excluir">🗑</button>
+            </td>`:''}
+          </tr>`;
+        }).join('')}
+      </tbody>
+      ${filtrados.length>0&&totalRoyalties>0?`<tfoot>
+        <tr style="background:#faf5ff;border-top:2px solid #d8b4fe">
+          <td colspan="5" style="padding:10px 12px;font-size:12px;font-weight:700;color:#7c3aed">TOTAL ROYALTIES A REPASSAR (pagos no período)</td>
+          <td style="padding:10px 12px;text-align:right;font-size:14px;font-weight:800;color:#7c3aed">${fmtR(totalRoyalties)}</td>
+          <td colspan="${isMaster()?2:1}"></td>
+        </tr>
+      </tfoot>`:''}
+    </table>
+  </div>
+
+  <!-- TIPOS DE SERVIÇO LEGENDA -->
+  <div style="margin-top:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px">
+    <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:6px">📋 Tipos de serviço disponíveis</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:10px;color:#64748b">
+      ${['Recrutamento e Seleção','Busca de Currículos','Avaliação Comportamental','Cargos e Salários',
+         'Consultoria de RH','Serviços Customizados','Carreiras','Treinamento','Coaching'].map(t=>
+        `<span style="background:#dbeafe;color:#1e40af;border-radius:4px;padding:2px 7px;font-weight:500">${t}</span>`
+      ).join('')}
+    </div>
+  </div>`;
+}
+
+// ── CRUD de Serviços Extras ─────────────────────────────────────────
+function _salvarServicoBtn(){
+  salvarServico(window._svCurrentSid||null);
+}
+
+function _svUpdateRoy(v){
+  var r=document.getElementById('sv-roy');
+  if(r) r.textContent='Royalties ('+R.FINANCEIRO.TAXA_ROYALTIES+'%): R$ '+
+    ((parseFloat(v)||0)*R.FINANCEIRO.TAXA_ROYALTIES/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+
+function abrirNovoServico(sid){
+  if(!isMaster()){notify('🔒 Apenas master pode gerenciar serviços','e');return;}
+  const servicos = LS.get('servicos_extras')||[];
+  const s = sid ? servicos.find(x=>x.id===sid) : null;
+  const TIPOS = ['Recrutamento e Seleção','Busca de Currículos','Avaliação Comportamental',
+                 'Cargos e Salários','Consultoria de RH','Serviços Customizados','Carreiras',
+                 'Treinamento','Coaching','Outro'];
+  const hoje = _hojeDDMMAAAA();
+  const fmtR = v=>'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const royPrev = s ? fmtR((s.valor||0)*R.FINANCEIRO.TAXA_ROYALTIES/100) : 'R$ 0,00';
+
+  window._svCurrentSid = sid || null;
+  openMo(sid?'✏️ Editar Serviço':'🛠️ Novo Serviço Extra',
+    '<div style="display:flex;flex-direction:column;gap:12px">'+
+    '<div class="f"><label>Descrição do serviço *</label>'+
+    '<input id="sv-desc" value="'+(s?_esc(s.descricao):'')+ '" placeholder="Ex: Avaliação DISC para 5 candidatos"></div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+    '<div class="f"><label>Tipo</label><select id="sv-tipo">'+
+    TIPOS.map(t=>`<option ${s&&s.tipo===t?'selected':''}>${t}</option>`).join('')+
+    '</select></div>'+
+    '<div class="f"><label>Data (DD/MM/AAAA)</label>'+
+    '<input id="sv-data" value="'+(s?s.data:hoje)+'" placeholder="DD/MM/AAAA" data-date-mask oninput="maskDate(this)" maxlength="10"></div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+    '<div class="f"><label>Cliente / Empresa</label>'+
+    '<input id="sv-cliente" value="'+(s?_esc(s.cliente):'')+ '" placeholder="Nome do cliente"></div>'+
+    '<div class="f"><label>Valor (R$) *</label>'+
+    '<input id="sv-valor" type="number" step="0.01" min="0" value="'+(s?s.valor:'')+ '" placeholder="0,00"'+
+    ' oninput="_svUpdateRoy(this.value)">'+
+    '</div></div>'+
+    '<div style="background:#faf5ff;border:1px solid #d8b4fe;border-radius:7px;padding:8px 12px;font-size:12px;color:#7c3aed;font-weight:600" id="sv-roy">'+
+    'Royalties ('+R.FINANCEIRO.TAXA_ROYALTIES+'%): '+royPrev+'</div>'+
+    '<div class="f"><label>Status</label><select id="sv-status">'+
+    '<option value="Pendente" '+(s&&s.status!=='Pago'?'selected':'')+'>🟡 Pendente</option>'+
+    '<option value="Pago" '+(s&&s.status==='Pago'?'selected':'')+'>🟢 Pago</option>'+
+    '</select></div>'+
+    '<div class="f"><label>Observação (opcional)</label>'+
+    '<input id="sv-obs" value="'+(s?_esc(s.obs||''):'')+ '" placeholder="Informações adicionais..."></div>'+
+    '</div>',
+    '<button class="btn bg bsm" onclick="closeMo()">Cancelar</button> '+
+    '<button class="btn bp bsm" id="sv-save-btn" onclick="_salvarServicoBtn()">💾 Salvar</button>'
+  );
+}
+
+function salvarServico(sid){
+  if(!isMaster()){notify('🔒 Apenas master','e');return;}
+  const g=id=>document.getElementById(id);
+  const desc=g('sv-desc')?.value?.trim();
+  const valor=parseFloat(g('sv-valor')?.value||0);
+  if(!desc){notify('Informe a descrição do serviço','e');return;}
+  if(!valor||valor<=0){notify('Informe o valor do serviço','e');return;}
+
+  const servicos = LS.get('servicos_extras')||[];
+  const novoServico = {
+    id: sid || uid(),
+    descricao: desc,
+    tipo: g('sv-tipo')?.value||'Outro',
+    data: g('sv-data')?.value||_hojeDDMMAAAA(),
+    cliente: g('sv-cliente')?.value?.trim()||'',
+    valor,
+    royalties: valor*R.FINANCEIRO.TAXA_ROYALTIES/100,
+    status: g('sv-status')?.value||'Pendente',
+    obs: g('sv-obs')?.value?.trim()||'',
+    criadoEm: new Date().toLocaleDateString('pt-BR'),
+  };
+
+  if(sid){
+    const idx=servicos.findIndex(x=>x.id===sid);
+    if(idx>=0) servicos[idx]=novoServico; else servicos.push(novoServico);
+  } else {
+    servicos.push(novoServico);
+  }
+  LS.set('servicos_extras', servicos);
+  // Sync com RTDB se disponível
+  if(window.__fbRtdb && window.saveRtdb) saveRtdb('servicos_extras', servicos);
+  closeMo();
+  renderFinanceiro(document.getElementById('pg-financeiro'));
+  notify('✅ Serviço '+(sid?'atualizado':'cadastrado')+' com sucesso!');
+}
+
+function editarServico(sid){ abrirNovoServico(sid); }
+
+function excluirServico(sid){
+  if(!isMaster()){notify('🔒 Apenas master','e');return;}
+  if(!confirm('Excluir este serviço? Ação irreversível.')) return;
+  const servicos=(LS.get('servicos_extras')||[]).filter(s=>s.id!==sid);
+  LS.set('servicos_extras', servicos);
+  if(window.__fbRtdb && window.saveRtdb) saveRtdb('servicos_extras', servicos);
+  renderFinanceiro(document.getElementById('pg-financeiro'));
+  notify('🗑 Serviço excluído.');
+}
+
+function atualizarStatusServico(sid, novoStatus){
+  if(!isMaster()){notify('🔒 Apenas master','e');return;}
+  const servicos=LS.get('servicos_extras')||[];
+  const idx=servicos.findIndex(s=>s.id===sid);
+  if(idx>=0){
+    servicos[idx].status=novoStatus;
+    if(novoStatus==='Pago') servicos[idx].dataPagamento=_hojeDDMMAAAA();
+    LS.set('servicos_extras', servicos);
+    if(window.__fbRtdb && window.saveRtdb) saveRtdb('servicos_extras', servicos);
+    renderFinanceiro(document.getElementById('pg-financeiro'));
+    notify(novoStatus==='Pago'?'✅ Serviço marcado como Pago':'↩️ Status revertido para Pendente');
+  }
+}
+
+
 function renderMetasBody(){
   const hoje = new Date();
   const mesAtual = S.metasMes || String(hoje.getMonth()+1).padStart(2,'0');
@@ -12395,12 +12927,6 @@ function saveCandNew(){
   const g = id => document.getElementById(id);
   const name = (g('new-cn')||g('cn'))?.value?.trim();
   if(!name){ notify('Informe o nome do candidato','e'); return; }
-  // Verificar se tentando aprovar sem permissão
-  const _newResult = g('new-cre')?.value||g('cre')?.value||'';
-  if(_newResult==='APROVADO' && !isMaster()){
-    notify('🔒 Apenas a administradora master pode cadastrar candidatos já aprovados.','e');
-    return;
-  }
   // Verificar duplicado (nome + telefone)
   const _phone = (g('new-cph')||g('cph'))?.value?.replace(/\D/g,'')||'';
   const _nameLow = name.toLowerCase().trim();
@@ -12975,18 +13501,7 @@ function openEditCand(cid, abaInicial){
 
 function updateCand(cid){
   const g=id=>document.getElementById(id);
-  // VALIDAÇÃO DE PERMISSÃO
   const _cAtual = S.candidates.find(x=>x.id===cid);
-  if(_cAtual && !podeEditarCandidato(_cAtual)){
-    notify('🔒 Apenas administradores master podem editar candidatos já aprovados.','e');
-    closeMo(); return;
-  }
-  // Verificar se está tentando definir APROVADO sem permissão de fluxo
-  const _novoResult = g('cre')?.value||'';
-  if(_novoResult==='APROVADO' && !podeDefinirResultado(_cAtual, 'APROVADO')){
-    if(g('cre')) g('cre').value = _cAtual?.result||'';
-    return;
-  }
   S.candidates=S.candidates.map(c=>{
     if(c.id!==cid)return c;
     return{...c,
@@ -15172,9 +15687,76 @@ function marcarParecerEnviado(cid){
   render(S.tab);
 }
 
+// ─── Remover candidatos em duplicidade ───────────────────────
+function removerDuplicatasCandidatos(){
+  if(!isMaster() && !PERMS.isSupervisor(S.user.role)){
+    notify('Apenas admin e supervisora CLT podem remover duplicatas','e');
+    return;
+  }
+
+  // Detectar duplicatas por nome normalizado + jid
+  // Para cada grupo, manter o registro com mais dados preenchidos
+  const grupos = {};
+  S.candidates.forEach(c=>{
+    const chave = (c.name||'').trim().toLowerCase() + '|' + (c.jid||'');
+    if(!grupos[chave]) grupos[chave] = [];
+    grupos[chave].push(c);
+  });
+
+  const duplicados = Object.values(grupos).filter(g => g.length > 1);
+  if(duplicados.length === 0){
+    notify('✅ Nenhuma duplicata encontrada!');
+    return;
+  }
+
+  // Calcular quais serão removidos
+  const idsParaRemover = new Set();
+  const idsParaManter  = new Set();
+  duplicados.forEach(grupo=>{
+    // Pontuar cada registro pela quantidade de campos preenchidos
+    const pontuado = grupo.map(c=>{
+      let pts = 0;
+      if(c.phone) pts += 2;
+      if(c.adm)   pts += 3;
+      if(c.result === 'APROVADO') pts += 5;
+      if(c.parecerTexto) pts += 2;
+      if(c.interview) pts += 1;
+      if(c.obs) pts += 1;
+      if(c.finStatus === 'Pago') pts += 4;
+      return { c, pts };
+    });
+    pontuado.sort((a,b) => b.pts - a.pts); // maior pontuação primeiro
+    idsParaManter.add(pontuado[0].c.id);
+    pontuado.slice(1).forEach(x => idsParaRemover.add(x.c.id));
+  });
+
+  // Montar lista para mostrar ao usuário
+  const preview = duplicados.slice(0, 20).map(grupo => {
+    const chave = (grupo[0].name||'').trim();
+    const vaga  = S.jobs.find(j=>j.id===grupo[0].jid);
+    return '• '+chave+' ('+(vaga?.title||grupo[0].company||grupo[0].jid||'sem vaga')+') — '+grupo.length+' registros';
+  }).join('\n');
+
+  const total = idsParaRemover.size;
+  if(!confirm(
+    'Foram encontradas '+duplicados.length+' duplicata(s), totalizando '+total+' registro(s) a remover.\n\n'+
+    'Será mantido o registro com mais dados para cada candidato.\n\n'+
+    (duplicados.length<=20?preview+'\n\n':'(mostrando primeiros 20 de '+duplicados.length+')\n\n')+
+    'Confirma a remoção?'
+  )) return;
+
+  const antes = S.candidates.length;
+  S.candidates = S.candidates.filter(c => !idsParaRemover.has(c.id));
+  save('candidates');
+  const depois = S.candidates.length;
+  notify('🧹 '+total+' duplicata(s) removida(s) com sucesso! ('+antes+' → '+depois+' candidatos)');
+  render(S.tab);
+}
+
 // ─── Excluir candidato com confirmação ───────────────────────
 function excluirCandidato(cid, nome){
-  if(!PERMS.isSupervisor(S.user.role)){
+  // Master (Liliane) pode excluir qualquer candidato sem restrição
+  if(!isMaster() && !PERMS.isSupervisor(S.user.role)){
     notify('Apenas admin e supervisora CLT podem excluir candidatos','e');
     return;
   }
