@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IntegraVagas — Crie seu Currículo Gratuitamente</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --or:#E85D1E;--bl:#1A4B8F;--bg:#f1f5f9;--sf:#fff;--bd:#e2e8f0;
+  --tx:#1e293b;--tx2:#475569;--tx3:#64748b;--tx4:#94a3b8;
+  --gn:#16a34a;--gnd:#dcfce7;--rd:#dc2626;--rdd:#fee2e2;
+  --am:#d97706;--amd:#fef3c7;--rad:12px;--rsm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--tx);font-size:14px;line-height:1.5;min-height:100vh}
+
+/* ── HEADER ── */
+.header{background:var(--sf);border-bottom:1px solid var(--bd);padding:14px 24px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;box-shadow:0 1px 8px rgba(0,0,0,.06)}
+.logo-mark{width:38px;height:38px;background:var(--or);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:13px;letter-spacing:-.03em;flex-shrink:0}
+.header-txt h1{font-size:17px;font-weight:800;color:var(--tx);letter-spacing:-.02em}
+.header-txt p{font-size:11px;color:var(--tx3)}
+.header-badge{margin-left:auto;background:linear-gradient(135deg,#E85D1E,#c44a15);color:#fff;font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;letter-spacing:.04em}
+
+/* ── HERO ── */
+.hero{background:linear-gradient(135deg,var(--bl) 0%,#0f2d5a 100%);color:#fff;padding:48px 24px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")}
+.hero-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:5px 14px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:18px}
+.hero h2{font-size:clamp(22px,5vw,36px);font-weight:900;letter-spacing:-.03em;line-height:1.2;margin-bottom:12px}
+.hero h2 span{color:#FF8F5C}
+.hero p{font-size:15px;color:rgba(255,255,255,.75);max-width:520px;margin:0 auto 28px}
+.steps-row{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.step-chip{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
+.step-chip span{background:var(--or);color:#fff;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}
+
+/* ── MAIN ── */
+.container{max-width:780px;margin:0 auto;padding:28px 16px 60px}
+
+/* ── STEP INDICATOR ── */
+.step-indicator{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:28px}
+.si-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;max-width:140px}
+.si-circle{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2px solid var(--bd);background:var(--sf);color:var(--tx4);transition:all .3s;position:relative;z-index:1}
+.si-circle.done{background:var(--gn);border-color:var(--gn);color:#fff}
+.si-circle.active{background:var(--or);border-color:var(--or);color:#fff;box-shadow:0 0 0 4px rgba(232,93,30,.2)}
+.si-label{font-size:10px;font-weight:600;color:var(--tx4);text-align:center;line-height:1.3}
+.si-label.active{color:var(--or)}
+.si-label.done{color:var(--gn)}
+.si-line{flex:1;height:2px;background:var(--bd);margin-top:-20px;transition:background .3s}
+.si-line.done{background:var(--gn)}
+
+/* ── CARDS ── */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--rad);padding:24px 26px;margin-bottom:16px;animation:fi .25s ease}
+.card-title{font-size:16px;font-weight:800;color:var(--tx);letter-spacing:-.02em;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.card-sub{font-size:13px;color:var(--tx3);margin-bottom:20px}
+@keyframes fi{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── FORMS ── */
+.f{margin-bottom:14px}
+.f label{font-size:11px;font-weight:700;color:var(--tx3);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em}
+.f label .req{color:var(--or)}
+.f input,.f select,.f textarea{width:100%;border:1.5px solid var(--bd);border-radius:var(--rsm);padding:10px 13px;font-size:13px;outline:none;background:var(--sf);color:var(--tx);transition:border-color .15s;font-family:'Inter',sans-serif}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--bl);box-shadow:0 0 0 3px rgba(26,75,143,.08)}
+.f textarea{resize:vertical;min-height:80px}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 16px}
+@media(max-width:560px){.fg2,.fg3{grid-template-columns:1fr}}
+
+/* ── NÍVEL SELECTOR ── */
+.nivel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+.nivel-btn{border:2px solid var(--bd);border-radius:var(--rsm);padding:12px 10px;text-align:center;cursor:pointer;transition:all .18s;background:var(--sf);position:relative}
+.nivel-btn:hover{border-color:var(--bl);background:#f0f5ff}
+.nivel-btn.sel{border-color:var(--or);background:linear-gradient(135deg,#fff8f5,#fff);box-shadow:0 0 0 3px rgba(232,93,30,.1)}
+.nivel-btn .nb-icon{font-size:22px;margin-bottom:4px}
+.nivel-btn .nb-title{font-size:12px;font-weight:700;color:var(--tx);margin-bottom:2px}
+.nivel-btn .nb-desc{font-size:10px;color:var(--tx3);line-height:1.3}
+.nivel-btn.sel::after{content:'✓';position:absolute;top:6px;right:8px;font-size:11px;font-weight:800;color:var(--or)}
+
+/* ── EXPERIÊNCIA CARDS ── */
+.exp-item{background:#f8fafc;border:1px solid var(--bd);border-radius:var(--rsm);padding:14px 16px;margin-bottom:10px;position:relative}
+.exp-remove{position:absolute;top:10px;right:10px;background:none;border:none;color:var(--tx4);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px}
+.exp-remove:hover{background:var(--rdd);color:var(--rd)}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone{border:2px dashed var(--bd);border-radius:var(--rsm);padding:24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--sf)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--bl);background:#f0f5ff}
+.upload-zone p{font-size:13px;color:var(--tx3);margin-top:6px}
+.upload-zone .up-icon{font-size:28px}
+.upload-zone .up-btn{font-size:12px;font-weight:600;color:var(--bl);text-decoration:underline;cursor:pointer}
+
+/* ── LGPD BOX ── */
+.lgpd-box{background:#fffbf0;border:1px solid #fed7aa;border-radius:var(--rsm);padding:16px 18px;margin-bottom:20px}
+.lgpd-box h4{font-size:12px;font-weight:800;color:#92400e;margin-bottom:8px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.04em}
+.lgpd-box p{font-size:12px;color:#78350f;line-height:1.6}
+.lgpd-check{display:flex;align-items:flex-start;gap:10px;margin-top:12px;cursor:pointer}
+.lgpd-check input[type=checkbox]{width:16px;height:16px;margin-top:1px;accent-color:var(--or);flex-shrink:0}
+.lgpd-check span{font-size:12px;color:#92400e;font-weight:500;line-height:1.5}
+
+/* ── BOTÕES ── */
+.btn{border:none;border-radius:var(--rsm);font-family:'Inter',sans-serif;font-weight:700;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;font-size:14px}
+.btn:hover{opacity:.88;transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn-primary{background:var(--or);color:#fff;padding:12px 24px}
+.btn-secondary{background:var(--bl);color:#fff;padding:12px 24px}
+.btn-ghost{background:var(--bg);color:var(--tx2);padding:12px 24px;border:1px solid var(--bd)}
+.btn-sm{padding:7px 14px;font-size:12px}
+.btn-full{width:100%;justify-content:center}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;padding-top:16px;border-top:1px solid var(--bd)}
+
+/* ── OR DIVIDER ── */
+.or-div{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--tx4);font-size:12px;font-weight:600}
+.or-div::before,.or-div::after{content:'';flex:1;height:1px;background:var(--bd)}
+
+/* ── GERADOR IA ── */
+.ia-box{background:linear-gradient(135deg,#f0f5ff,#fff8f5);border:1px solid #bdd3ff;border-radius:var(--rad);padding:20px 22px;margin-bottom:16px}
+.ia-box h4{font-size:14px;font-weight:800;color:var(--bl);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.ia-box p{font-size:12px;color:var(--tx3);margin-bottom:14px}
+.ai-loading{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--bl);font-weight:600;padding:12px 0}
+.ai-spinner{width:20px;height:20px;border:3px solid #dbeafe;border-top-color:var(--bl);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── PREVIEW CURRÍCULO ── */
+.preview-wrap{background:#fff;border:1px solid var(--bd);border-radius:var(--rad);overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.preview-toolbar{background:#f8fafc;border-bottom:1px solid var(--bd);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.preview-toolbar span{font-size:12px;font-weight:600;color:var(--tx3)}
+#curriculo-preview{padding:40px 48px;font-family:'Times New Roman',serif;font-size:11pt;line-height:1.5;color:#000;min-height:600px;background:#fff}
+#curriculo-preview h1{font-family:'Arial',sans-serif;font-size:16pt;font-weight:bold;margin-bottom:2px;color:#000}
+#curriculo-preview .cv-contact{font-size:9pt;color:#333;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid #1A4B8F}
+#curriculo-preview .cv-section{margin-bottom:14px}
+#curriculo-preview .cv-section h2{font-family:'Arial',sans-serif;font-size:10pt;font-weight:bold;text-transform:uppercase;letter-spacing:.08em;color:#1A4B8F;border-bottom:1px solid #1A4B8F;padding-bottom:3px;margin-bottom:8px}
+#curriculo-preview .cv-objetivo{font-size:10pt;color:#333;font-style:italic;margin-bottom:14px;padding:8px 12px;background:#f8f9ff;border-left:3px solid #1A4B8F}
+#curriculo-preview .cv-resumo{font-size:10pt;line-height:1.6}
+#curriculo-preview .cv-exp-item{margin-bottom:12px}
+#curriculo-preview .cv-exp-header{display:flex;justify-content:space-between;align-items:baseline}
+#curriculo-preview .cv-exp-empresa{font-family:'Arial',sans-serif;font-size:10pt;font-weight:bold}
+#curriculo-preview .cv-exp-data{font-size:9pt;color:#555}
+#curriculo-preview .cv-exp-cargo{font-size:10pt;font-style:italic;color:#333;margin-bottom:4px}
+#curriculo-preview .cv-exp-desc{font-size:9.5pt;color:#222;padding-left:12px}
+#curriculo-preview .cv-exp-desc li{margin-bottom:3px}
+#curriculo-preview .cv-two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+#curriculo-preview .cv-hab-item{font-size:9.5pt;margin-bottom:2px}
+@media print{#curriculo-preview{padding:20px}}
+
+/* ── SUCCESS ── */
+.success-box{background:var(--gnd);border:1px solid #86efac;border-radius:var(--rad);padding:28px;text-align:center}
+.success-box .s-icon{font-size:42px;margin-bottom:12px}
+.success-box h3{font-size:20px;font-weight:800;color:#166534;margin-bottom:8px}
+.success-box p{font-size:13px;color:#166534;opacity:.85}
+
+/* ── TAGS OPCIONAIS ── */
+.opt-tag{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1.5px solid var(--bd);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:600;color:var(--tx3);cursor:pointer;transition:all .15s;margin:3px}
+.opt-tag.sel{background:rgba(26,75,143,.08);border-color:var(--bl);color:var(--bl)}
+.opt-tag:hover{border-color:var(--bl)}
+
+/* ── DICA ── */
+.dica{background:var(--bg);border-left:3px solid var(--or);border-radius:0 var(--rsm) var(--rsm) 0;padding:10px 14px;margin-bottom:14px}
+.dica p{font-size:11.5px;color:var(--tx2);line-height:1.5}
+.dica strong{color:var(--or)}
+
+/* ── HIDE/SHOW ── */
+.step-page{display:none}
+.step-page.active{display:block;animation:fi .25s ease}
+
+/* ── SEÇÃO BANCO TALENTOS ── */
+.banco-box{background:linear-gradient(135deg,#1A4B8F,#0f2d5a);border-radius:var(--rad);padding:20px 22px;color:#fff;margin-bottom:16px}
+.banco-box h4{font-size:15px;font-weight:800;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.banco-box p{font-size:12px;opacity:.8;margin-bottom:16px;line-height:1.6}
+.banco-check{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.banco-check input[type=checkbox]{width:16px;height:16px;accent-color:#FF8F5C;flex-shrink:0;margin-top:1px}
+.banco-check span{font-size:12px;color:rgba(255,255,255,.9);line-height:1.5}
+
+/* ── PROGRESS BAR ── */
+.progress-bar{height:4px;background:var(--bd);border-radius:2px;margin-bottom:24px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--bl),var(--or));border-radius:2px;transition:width .4s ease}
+
+@media(max-width:480px){
+  #curriculo-preview{padding:20px 16px;font-size:10pt}
+  .card{padding:18px 16px}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo-mark">IV</div>
+  <div class="header-txt">
+    <h1>IntegraVagas</h1>
+    <p>Plataforma Nacional de Talentos</p>
+  </div>
+  <div class="header-badge">✨ 100% Gratuito</div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-tag">🚀 Ferramenta Gratuita</div>
+  <h2>Crie um currículo que<br><span>passa pelos filtros de IA</span></h2>
+  <p>Monte seu currículo profissional em minutos e seja encontrado pelas melhores empresas da região.</p>
+  <div class="steps-row">
+    <div class="step-chip"><span>1</span> Preencha seus dados</div>
+    <div class="step-chip"><span>2</span> IA otimiza o texto</div>
+    <div class="step-chip"><span>3</span> Baixe em PDF</div>
+  </div>
+</div>
+
+<!-- CONTAINER PRINCIPAL -->
+<div class="container">
+
+  <!-- PROGRESS BAR -->
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:20%"></div></div>
+
+  <!-- STEP INDICATOR -->
+  <div class="step-indicator">
+    <div class="si-item">
+      <div class="si-circle active" id="si-1">1</div>
+      <div class="si-label active" id="sl-1">Perfil</div>
+    </div>
+    <div class="si-line" id="sl-line-1"></div>
+    <div class="si-item">
+      <div class="si-circle" id="si-2">2</div>
+      <div class="si-label" id="sl-2">Experiência</div>
+    </div>
+    <div class="si-line" id="sl-line-2"></div>
+    <div class="si-item">
+      <div class="si-circle" id="si-3">3</div>
+      <div class="si-label" id="sl-3">Formação</div>
+    </div>
+    <div class="si-line" id="sl-line-3"></div>
+    <div class="si-item">
+      <div class="si-circle" id="si-4">4</div>
+      <div class="si-label" id="sl-4">Currículo</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════ -->
+  <!-- STEP 1 — DADOS PESSOAIS + NÍVEL       -->
+  <!-- ══════════════════════════════════════ -->
+  <div class="step-page active" id="step-1">
+
+    <div class="card">
+      <div class="card-title">👤 Seus dados pessoais</div>
+      <div class="card-sub">Informações de contato para as empresas te encontrarem</div>
+
+      <div class="fg2">
+        <div class="f"><label>Nome completo <span class="req">*</span></label><input type="text" id="nome" placeholder="Ex: Maria da Silva"></div>
+        <div class="f" style="position:relative">
+          <label>Cidade / Estado <span class="req">*</span></label>
+          <input type="text" id="cidade" placeholder="Digite sua cidade..." autocomplete="off" oninput="filtrarCidades(this.value)" onblur="setTimeout(()=>fecharCidades(),200)">
+          <div id="cidades-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--bl);border-radius:0 0 var(--rsm) var(--rsm);z-index:200;max-height:200px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.1)"></div>
+        </div>
+      </div>
+      <div class="fg2">
+        <div class="f"><label>Telefone / WhatsApp <span class="req">*</span></label><input type="tel" id="telefone" placeholder="(47) 99999-9999"></div>
+        <div class="f"><label>E-mail <span class="req">*</span></label><input type="email" id="email" placeholder="seu@email.com"></div>
+      </div>
+      <div class="fg2">
+        <div class="f"><label>CPF</label><input type="text" id="cpf" placeholder="000.000.000-00" maxlength="14"></div>
+        <div class="f"><label>LinkedIn (opcional)</label><input type="text" id="linkedin" placeholder="linkedin.com/in/seuperfil"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🎯 Objetivo profissional <span class="req" style="font-size:12px;color:var(--tx3);font-weight:400">Diz muito sobre você</span></div>
+      <div class="card-sub">Seja específico — isso é o que o recrutador lê em primeiro lugar</div>
+
+      <div class="f">
+        <label>Cargo / Área que busca <span class="req">*</span></label>
+        <input type="text" id="cargo_objetivo" placeholder="Ex: Analista de Marketing Digital · Auxiliar Administrativo · Vendedor Externo">
+      </div>
+      <div class="f">
+        <label>Descrição do objetivo (1–2 linhas)</label>
+        <textarea id="objetivo_txt" rows="2" placeholder="Ex: Atuar como Analista Contábil em empresa de médio ou grande porte, contribuindo com minha experiência em rotinas fiscais e apuração de impostos."></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📊 Qual é o seu nível profissional?</div>
+      <div class="card-sub">Isso define o que destacar no seu currículo</div>
+
+      <div class="nivel-grid" id="nivel-grid">
+        <div class="nivel-btn" data-nivel="jovem" onclick="selNivel(this)">
+          <div class="nb-icon">🌱</div>
+          <div class="nb-title">Jovem Aprendiz</div>
+          <div class="nb-desc">Primeiro emprego ou aprendizagem profissional</div>
+        </div>
+        <div class="nivel-btn" data-nivel="estagiario" onclick="selNivel(this)">
+          <div class="nb-icon">📚</div>
+          <div class="nb-title">Estagiário</div>
+          <div class="nb-desc">Cursando faculdade ou técnico</div>
+        </div>
+        <div class="nivel-btn" data-nivel="junior" onclick="selNivel(this)">
+          <div class="nb-icon">⚡</div>
+          <div class="nb-title">Júnior / Assistente</div>
+          <div class="nb-desc">Até 3 anos de experiência</div>
+        </div>
+        <div class="nivel-btn" data-nivel="pleno" onclick="selNivel(this)">
+          <div class="nb-icon">💼</div>
+          <div class="nb-title">Pleno / Analista</div>
+          <div class="nb-desc">3 a 7 anos de experiência</div>
+        </div>
+        <div class="nivel-btn" data-nivel="senior" onclick="selNivel(this)">
+          <div class="nb-icon">🏆</div>
+          <div class="nb-title">Sênior / Especialista</div>
+          <div class="nb-desc">Acima de 7 anos, referência na área</div>
+        </div>
+        <div class="nivel-btn" data-nivel="lideranca" onclick="selNivel(this)">
+          <div class="nb-icon">👑</div>
+          <div class="nb-title">Liderança / Gestão</div>
+          <div class="nb-desc">Coordenador, Gerente, Diretor</div>
+        </div>
+      </div>
+
+      <!-- DICA DINÂMICA POR NÍVEL -->
+      <div class="dica" id="dica-nivel" style="display:none">
+        <p id="dica-nivel-txt"></p>
+      </div>
+    </div>
+
+    <!-- LGPD -->
+    <div class="lgpd-box">
+      <h4>🔒 Lei Geral de Proteção de Dados (LGPD)</h4>
+      <p>Seus dados serão utilizados exclusivamente para fins de recrutamento e seleção. A IntegraVagas poderá compartilhá-los com empresas parceiras para oferta de vagas de emprego, respeitando a Lei nº 13.709/2018 (LGPD). Você pode solicitar exclusão ou retificação dos seus dados a qualquer momento.</p>
+      <label class="lgpd-check">
+        <input type="checkbox" id="aceite-lgpd">
+        <span>Estou ciente e <strong>autorizo a IntegraVagas a utilizar meus dados pessoais</strong> para ofertas de vagas de emprego, conforme a LGPD. Confirmo que as informações fornecidas são verdadeiras.</span>
+      </label>
+    </div>
+
+    <!-- BANCO DE TALENTOS -->
+    <div class="banco-box">
+      <h4>🗂 Banco de Talentos IntegraVagas</h4>
+      <p>Faça parte da nossa base de candidatos e seja contactado quando surgir uma oportunidade alinhada com o seu perfil — mesmo sem uma vaga aberta no momento!</p>
+      <label class="banco-check">
+        <input type="checkbox" id="banco-talentos" checked>
+        <span>Sim! Quero fazer parte do banco de talentos e ser avisado sobre oportunidades de emprego.</span>
+      </label>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-primary" onclick="irStep(2)">Próximo: Experiência →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════ -->
+  <!-- STEP 2 — EXPERIÊNCIA PROFISSIONAL     -->
+  <!-- ══════════════════════════════════════ -->
+  <div class="step-page" id="step-2">
+
+    <div class="card">
+      <div class="card-title">💼 Experiência Profissional</div>
+      <div class="card-sub">Foque nas conquistas, não apenas nas tarefas. Use números sempre que possível.</div>
+
+      <div class="dica">
+        <p><strong>Dica ATS:</strong> Descreva cada experiência com verbos de ação (implementei, reduzi, liderei) e resultados mensuráveis (ex: "reduzi o tempo de processamento em 30%"). Isso aumenta a visibilidade nos sistemas automáticos.</p>
+      </div>
+
+      <div id="exps-container"></div>
+
+      <button class="btn btn-ghost btn-sm" onclick="addExp()">+ Adicionar experiência</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔧 Principais habilidades técnicas</div>
+      <div class="card-sub">Ferramentas, sistemas, softwares, idiomas técnicos que você domina</div>
+      <div class="f">
+        <label>Liste suas habilidades técnicas</label>
+        <textarea id="habilidades" rows="3" placeholder="Ex: Excel avançado, SAP, Pacote Adobe, Atendimento ao cliente, TOTVS, Power BI, CRM Salesforce..."></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🌍 Idiomas</div>
+      <div id="idiomas-container">
+        <div class="fg2">
+          <div class="f"><label>Idioma</label><input type="text" class="idioma-nome" placeholder="Ex: Inglês"></div>
+          <div class="f"><label>Nível</label>
+            <select class="idioma-nivel">
+              <option value="">Selecione</option>
+              <option>Básico</option><option>Intermediário</option>
+              <option>Avançado</option><option>Fluente</option><option>Nativo</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="addIdioma()">+ Adicionar idioma</button>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="irStep(1)">← Voltar</button>
+      <button class="btn btn-primary" onclick="irStep(3)">Próximo: Formação →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════ -->
+  <!-- STEP 3 — FORMAÇÃO + EXTRAS            -->
+  <!-- ══════════════════════════════════════ -->
+  <div class="step-page" id="step-3">
+
+    <div class="card">
+      <div class="card-title">🎓 Formação Acadêmica</div>
+      <div class="card-sub">Do mais recente para o mais antigo. Inclua apenas o relevante para sua área.</div>
+      <div id="formacao-container">
+        <div class="exp-item form-item">
+          <div class="fg2">
+            <div class="f"><label>Curso / Graduação <span class="req">*</span></label><input type="text" class="form-curso" placeholder="Ex: Administração de Empresas"></div>
+            <div class="f"><label>Instituição</label><input type="text" class="form-inst" placeholder="Ex: UNIVILLE"></div>
+          </div>
+          <div class="fg2">
+            <div class="f"><label>Situação</label>
+              <select class="form-status">
+                <option>Concluído</option><option>Em andamento</option><option>Trancado</option>
+              </select>
+            </div>
+            <div class="f"><label>Ano conclusão / previsão</label><input type="text" class="form-ano" placeholder="2023"></div>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="addFormacao()">+ Adicionar formação</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📜 Cursos Complementares</div>
+      <div class="card-sub">Priorize os últimos 3 anos e os relacionados ao seu objetivo</div>
+      <div class="f">
+        <label>Cursos, certificações, treinamentos</label>
+        <textarea id="cursos" rows="4" placeholder="- Excel Avançado · Udemy · 2024&#10;- Liderança e Gestão de Equipes · SENAI · 2023&#10;- NR-35 · In Company · 2022"></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">⭐ Informações adicionais <span style="font-size:12px;color:var(--tx4);font-weight:400">(opcional)</span></div>
+      <div class="dica">
+        <p><strong>Inclua somente se tiver algo concreto a dizer.</strong> Voluntariado, prêmios, publicações ou projetos que demonstrem resultados reais valem muito mais do que adjetivos.</p>
+      </div>
+      <div class="f">
+        <label>Voluntariado / Atividades extracurriculares</label>
+        <textarea id="extras" rows="3" placeholder="Ex: Monitor de informática para idosos na Casa da Cultura (2023–atual). Organização da gincana beneficente da empresa, arrecadando R$ 8.000 em donativos."></textarea>
+      </div>
+      <div class="f">
+        <label>Pretensão salarial (opcional)</label>
+        <input type="text" id="pretensao" placeholder="Ex: A combinar · R$ 3.000 a R$ 4.000">
+      </div>
+    </div>
+
+    <!-- UPLOAD DE CURRÍCULO EXISTENTE -->
+    <div class="card">
+      <div class="card-title">📎 Já tem um currículo?</div>
+      <div class="card-sub">Você pode anexar seu currículo atual para complementar o cadastro</div>
+      <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-curriculo').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')">
+        <div class="up-icon">📄</div>
+        <p><span class="up-btn">Clique para selecionar</span> ou arraste seu arquivo aqui</p>
+        <p style="font-size:11px;color:var(--tx4);margin-top:4px">PDF, DOC ou DOCX · Máx. 5MB</p>
+      </div>
+      <input type="file" id="file-curriculo" accept=".pdf,.doc,.docx" style="display:none" onchange="handleUpload(this)">
+      <div id="file-name" style="font-size:12px;color:var(--gn);margin-top:8px;display:none"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="irStep(2)">← Voltar</button>
+      <button class="btn btn-secondary" onclick="gerarCurriculo()">✨ Gerar meu currículo com IA</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════ -->
+  <!-- STEP 4 — PREVIEW + DOWNLOAD           -->
+  <!-- ══════════════════════════════════════ -->
+  <div class="step-page" id="step-4">
+
+    <div class="ia-box" id="ia-loading-box" style="display:none">
+      <h4>🤖 Otimizando seu currículo com IA...</h4>
+      <p>Nossa IA está formatando o texto para máxima visibilidade nos sistemas ATS das empresas.</p>
+      <div class="ai-loading">
+        <div class="ai-spinner"></div>
+        <span id="ia-msg">Analisando seu perfil...</span>
+      </div>
+    </div>
+
+    <div class="card" id="preview-card" style="padding:0;overflow:hidden">
+      <div class="preview-toolbar">
+        <span>📄 Prévia do seu currículo — formato ATS</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="editarCurriculo()">✏️ Editar</button>
+          <button class="btn btn-primary btn-sm" onclick="baixarPDF()">⬇️ Baixar PDF</button>
+        </div>
+      </div>
+      <div id="curriculo-preview">
+        <!-- preenchido dinamicamente -->
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <span style="font-size:20px">💡</span>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--tx)">Dicas para o próximo passo</div>
+          <div style="font-size:12px;color:var(--tx3)">Como usar bem o seu currículo</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="background:var(--bg);border-radius:8px;padding:10px 12px"><div style="font-size:11px;font-weight:700;color:var(--or);margin-bottom:3px">🔑 Palavras-chave</div><div style="font-size:11px;color:var(--tx2)">Leia o anúncio da vaga e inclua as palavras-chave nas suas experiências.</div></div>
+        <div style="background:var(--bg);border-radius:8px;padding:10px 12px"><div style="font-size:11px;font-weight:700;color:var(--bl);margin-bottom:3px">📊 LinkedIn</div><div style="font-size:11px;color:var(--tx2)">Use o mesmo texto do seu resumo no LinkedIn para consistência.</div></div>
+        <div style="background:var(--bg);border-radius:8px;padding:10px 12px"><div style="font-size:11px;font-weight:700;color:var(--gn);margin-bottom:3px">📐 Formato</div><div style="font-size:11px;color:var(--tx2)">Nunca envie em .docx para vagas. Sempre salve e envie em PDF.</div></div>
+        <div style="background:var(--bg);border-radius:8px;padding:10px 12px"><div style="font-size:11px;font-weight:700;color:var(--am);margin-bottom:3px">📏 Tamanho</div><div style="font-size:11px;color:var(--tx2)">Máximo 2 páginas. Menos é mais na triagem automática.</div></div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="irStep(3)">← Editar dados</button>
+      <button class="btn btn-primary" onclick="finalizarCadastro()">✅ Concluir cadastro</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════ -->
+  <!-- STEP 5 — SUCESSO                      -->
+  <!-- ══════════════════════════════════════ -->
+  <div class="step-page" id="step-5">
+    <div class="success-box">
+      <div class="s-icon">🎉</div>
+      <h3>Tudo pronto!</h3>
+      <p id="success-msg">Seu currículo foi gerado e seu cadastro foi registrado com sucesso.</p>
+    </div>
+
+    <div class="card" style="margin-top:16px;text-align:center">
+      <p style="font-size:13px;color:var(--tx2);margin-bottom:16px">O que fazer agora?</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+        <button class="btn btn-primary" onclick="baixarPDF()">⬇️ Baixar meu currículo em PDF</button>
+        <button class="btn btn-ghost" onclick="window.open('https://www.linkedin.com','_blank')">💼 Abrir LinkedIn</button>
+      </div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--bd);font-size:11px;color:var(--tx4)">
+        Siga a <strong>IntegraVagas</strong> no Instagram para oportunidades exclusivas 📲
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- NOTIFICAÇÃO -->
+<div id="notif" style="position:fixed;top:16px;right:16px;z-index:999;padding:11px 18px;border-radius:10px;font-weight:600;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,.12);display:none;animation:fi .2s ease"></div>
+
+<script>
+// ══════════════════════════════════════════
+// ESTADO GLOBAL
+// ══════════════════════════════════════════
+let STEP = 1;
+let nivel_sel = '';
+let exps_count = 0;
+let form_count = 0;
+let curriculo_gerado = '';
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+window.onload = function(){
+  addExp();
+  addFormacao_check();
+  cpfMask();
+  telMask();
+};
+
+function cpfMask(){
+  const el = document.getElementById('cpf');
+  el.addEventListener('input',function(){
+    let v = this.value.replace(/\D/g,'');
+    v = v.replace(/(\d{3})(\d)/,'$1.$2');
+    v = v.replace(/(\d{3})(\d)/,'$1.$2');
+    v = v.replace(/(\d{3})(\d{1,2})$/,'$1-$2');
+    this.value = v;
+  });
+}
+
+
+// ══════════════════════════════════════════
+// CIDADES BRASILEIRAS — AUTOCOMPLETE
+// ══════════════════════════════════════════
+const CIDADES_BR = [
+  "Acrelandia, AC","Assis Brasil, AC","Brasileia, AC","Cruzeiro do Sul, AC","Feijo, AC","Jordao, AC","Mancio Lima, AC","Manoel Urbano, AC","Marechal Thaumaturgo, AC","Placido de Castro, AC","Porto Acre, AC","Porto Walter, AC","Rio Branco, AC","Rodrigues Alves, AC","Santa Rosa do Purus, AC","Sena Madureira, AC","Senador Guiomard, AC","Tarauaca, AC","Xapuri, AC",
+  "Agua Branca, AL","Arapiraca, AL","Atalaia, AL","Cacimbinhas, AL","Campo Alegre, AL","Coruripe, AL","Delmiro Gouveia, AL","Dois Riachos, AL","Feira Grande, AL","Girau do Ponciano, AL","Igaci, AL","Igreja Nova, AL","Inhapi, AL","Junqueiro, AL","Lagoa da Canoa, AL","Limoeiro de Anadia, AL","Maceio, AL","Maragogi, AL","Marechal Deodoro, AL","Maribondo, AL","Mata Grande, AL","Messias, AL","Murici, AL","Palestina, AL","Palmeira dos Indios, AL","Pao de Acucar, AL","Paripueira, AL","Penedo, AL","Piacabucu, AL","Pilar, AL","Piranhas, AL","Porto Calvo, AL","Porto de Pedras, AL","Quebrangulo, AL","Rio Largo, AL","Santa Luzia do Norte, AL","Santana do Ipanema, AL","Santana do Mundau, AL","Sao Bras, AL","Sao Jose da Laje, AL","Sao Jose da Tapera, AL","Sao Luis do Quitunde, AL","Sao Miguel dos Campos, AL","Sao Sebastiao, AL","Satuba, AL","Taquarana, AL","Teotonio Vilela, AL","Traipu, AL","Uniao dos Palmares, AL","Vicosa, AL",
+  "Amapa, AP","Calcoene, AP","Cutias, AP","Ferreira Gomes, AP","Itaubal, AP","Laranjal do Jari, AP","Macapa, AP","Mazagao, AP","Oiapoque, AP","Pedra Branca do Amapari, AP","Porto Grande, AP","Pracuuba, AP","Santana, AP","Serra do Navio, AP","Tartarugalzinho, AP","Vitoria do Jari, AP",
+  "Alvaraes, AM","Amatura, AM","Anama, AM","Anori, AM","Apui, AM","Atalaia do Norte, AM","Autazes, AM","Barcelos, AM","Barreirinha, AM","Benjamin Constant, AM","Beruri, AM","Boa Vista do Ramos, AM","Boca do Acre, AM","Borba, AM","Caapiranga, AM","Canutama, AM","Carauari, AM","Careiro, AM","Coari, AM","Codajas, AM","Eirunepe, AM","Envira, AM","Fonte Boa, AM","Guajara, AM","Humaita, AM","Iranduba, AM","Itacoatiara, AM","Itapiranga, AM","Japura, AM","Jurua, AM","Jutai, AM","Labrea, AM","Manacapuru, AM","Manaquiri, AM","Manaus, AM","Manicore, AM","Maraa, AM","Maues, AM","Nhamunda, AM","Nova Olinda do Norte, AM","Novo Airao, AM","Novo Aripuana, AM","Parintins, AM","Pauini, AM","Presidente Figueiredo, AM","Rio Preto da Eva, AM","Santa Isabel do Rio Negro, AM","Santo Antonio do Ica, AM","Sao Gabriel da Cachoeira, AM","Sao Paulo de Olivenca, AM","Silves, AM","Tabatinga, AM","Tapaua, AM","Tefe, AM","Tonantins, AM","Uarini, AM","Urucara, AM","Urucurituba, AM",
+  "Alagoinhas, BA","Barreiras, BA","Brumado, BA","Camacari, BA","Candeias, BA","Cruz das Almas, BA","Dias d Avila, BA","Eunapoles, BA","Feira de Santana, BA","Guanambi, BA","Ilheus, BA","Itabuna, BA","Itamaraju, BA","Jequie, BA","Juazeiro, BA","Lauro de Freitas, BA","Luis Eduardo Magalhaes, BA","Paulo Afonso, BA","Porto Seguro, BA","Salvador, BA","Santo Antonio de Jesus, BA","Seabra, BA","Serrinha, BA","Simoes Filho, BA","Teixeira de Freitas, BA","Valenca, BA","Vitoria da Conquista, BA",
+  "Aquiraz, CE","Caucaia, CE","Crato, CE","Fortaleza, CE","Iguatu, CE","Itapipoca, CE","Juazeiro do Norte, CE","Maranguape, CE","Maracanau, CE","Pacatuba, CE","Quixada, CE","Sobral, CE",
+  "Brasilia, DF",
+  "Aracruz, ES","Cachoeiro de Itapemirim, ES","Cariacica, ES","Colatina, ES","Guarapari, ES","Linhares, ES","Sao Mateus, ES","Serra, ES","Vila Velha, ES","Vitoria, ES",
+  "Aguas Lindas de Goias, GO","Anapolis, GO","Aparecida de Goiania, GO","Catalao, GO","Goiania, GO","Itumbiara, GO","Jatai, GO","Luziania, GO","Rio Verde, GO","Trindade, GO","Valparaiso de Goias, GO",
+  "Acailandia, MA","Bacabal, MA","Balsas, MA","Caxias, MA","Codo, MA","Imperatriz, MA","Itapecuru Mirim, MA","Paco do Lumiar, MA","Pinheiro, MA","Sao Jose de Ribamar, MA","Sao Luis, MA","Timon, MA",
+  "Belo Horizonte, MG","Betim, MG","Contagem, MG","Coronel Fabriciano, MG","Divinopolis, MG","Governador Valadares, MG","Ibirite, MG","Ipatinga, MG","Juiz de Fora, MG","Montes Claros, MG","Nova Lima, MG","Patos de Minas, MG","Pocos de Caldas, MG","Ribeirao das Neves, MG","Santa Luzia, MG","Sete Lagoas, MG","Uberaba, MG","Uberlandia, MG","Unai, MG","Varginha, MG",
+  "Aquidauana, MS","Campo Grande, MS","Corumba, MS","Dourados, MS","Navirai, MS","Nova Andradina, MS","Ponta Pora, MS","Tres Lagoas, MS",
+  "Alta Floresta, MT","Barra do Garcas, MT","Caceres, MT","Cuiaba, MT","Lucas do Rio Verde, MT","Primavera do Leste, MT","Rondonopolis, MT","Sinop, MT","Sorriso, MT","Tangara da Serra, MT","Varzea Grande, MT",
+  "Ananindeua, PA","Barcarena, PA","Belem, PA","Castanhal, PA","Itaituba, PA","Maraba, PA","Parauapebas, PA","Redencao, PA","Santarem, PA","Tucurui, PA",
+  "Bayeux, PB","Cabedelo, PB","Campina Grande, PB","Joao Pessoa, PB","Patos, PB","Santa Rita, PB","Sousa, PB",
+  "Caruaru, PE","Igarassu, PE","Jaboatao dos Guararapes, PE","Olinda, PE","Paulista, PE","Petrolina, PE","Recife, PE","Salgueiro, PE","Serra Talhada, PE",
+  "Altos, PI","Campo Maior, PI","Parnaiba, PI","Picos, PI","Teresina, PI",
+  "Almirante Tamandare, PR","Apucarana, PR","Araucaria, PR","Campo Largo, PR","Cascavel, PR","Colombo, PR","Curitiba, PR","Foz do Iguacu, PR","Francisco Beltrao, PR","Guarapuava, PR","Londrina, PR","Maringa, PR","Paranagua, PR","Pinhais, PR","Ponta Grossa, PR","Sao Jose dos Pinhais, PR","Toledo, PR","Umuarama, PR",
+  "Belford Roxo, RJ","Campos dos Goytacazes, RJ","Duque de Caxias, RJ","Itaborai, RJ","Macae, RJ","Marica, RJ","Mesquita, RJ","Niteroi, RJ","Nova Friburgo, RJ","Nova Iguacu, RJ","Petropolis, RJ","Queimados, RJ","Rio de Janeiro, RJ","Sao Goncalo, RJ","Sao Joao de Meriti, RJ","Teresopolis, RJ","Tres Rios, RJ","Volta Redonda, RJ",
+  "Caico, RN","Mossoro, RN","Natal, RN","Parnamirim, RN","Sao Goncalo do Amarante, RN",
+  "Ariquemes, RO","Cacoal, RO","Guajara-Mirim, RO","Ji-Parana, RO","Porto Velho, RO","Vilhena, RO",
+  "Alto Alegre, RR","Boa Vista, RR","Caracarai, RR","Mucajai, RR","Pacaraima, RR",
+  "Bento Goncalves, RS","Cachoeirinha, RS","Caxias do Sul, RS","Erechim, RS","Gravatai, RS","Novo Hamburgo, RS","Passo Fundo, RS","Pelotas, RS","Porto Alegre, RS","Rio Grande, RS","Santa Cruz do Sul, RS","Santa Maria, RS","Sao Leopoldo, RS","Uruguaiana, RS","Viarao, RS",
+  "Blumenau, SC","Brusque, SC","Chapeco, SC","Criciuma, SC","Florianopolis, SC","Itajai, SC","Jaragua do Sul, SC","Joinville, SC","Lages, SC","Palhoca, SC","Rio do Sul, SC","Sao Jose, SC","Tubarao, SC",
+  "Aracaju, SE","Itabaiana, SE","Lagarto, SE","Nossa Senhora do Socorro, SE","Sao Cristovao, SE",
+  "Americana, SP","Araraquara, SP","Araras, SP","Barueri, SP","Bauru, SP","Cajamar, SP","Campinas, SP","Carapicuiba, SP","Cotia, SP","Diadema, SP","Embu das Artes, SP","Ferraz de Vasconcelos, SP","Franco da Rocha, SP","Franca, SP","Guaruja, SP","Guarulhos, SP","Hortolandia, SP","Indaiatuba, SP","Itapecerica da Serra, SP","Itapevi, SP","Itaquaquecetuba, SP","Jacarei, SP","Jundiai, SP","Limeira, SP","Marilia, SP","Maua, SP","Mogi das Cruzes, SP","Osasco, SP","Piracicaba, SP","Presidente Prudente, SP","Praia Grande, SP","Ribeirao Pires, SP","Ribeirao Preto, SP","Rio Claro, SP","Santo Andre, SP","Santos, SP","Sao Bernardo do Campo, SP","Sao Caetano do Sul, SP","Sao Jose do Rio Preto, SP","Sao Jose dos Campos, SP","Sao Paulo, SP","Sao Vicente, SP","Sorocaba, SP","Sumare, SP","Suzano, SP","Taboao da Serra, SP","Taubate, SP",
+  "Araguaina, TO","Gurupi, TO","Palmas, TO","Porto Nacional, TO"
+];
+
+// Mapa para exibir com acentos corretos
+const CIDADES_DISPLAY = {
+  "Acrelandia, AC":"Acrelândia, AC","Brasileia, AC":"Brasiléia, AC","Feijo, AC":"Feijó, AC","Jordao, AC":"Jordão, AC","Mancio Lima, AC":"Mâncio Lima, AC","Marechal Thaumaturgo, AC":"Marechal Thaumaturgo, AC","Placido de Castro, AC":"Plácido de Castro, AC",
+  "Agua Branca, AL":"Água Branca, AL","Arapiraca, AL":"Arapiraca, AL","Maceio, AL":"Maceió, AL","Maragogi, AL":"Maragogi, AL","Penedo, AL":"Penedo, AL","Piacabucu, AL":"Piaçabuçu, AL","Pao de Acucar, AL":"Pão de Açúcar, AL","Vicosa, AL":"Viçosa, AL","Uniao dos Palmares, AL":"União dos Palmares, AL","Sao Bras, AL":"São Brás, AL","Sao Jose da Laje, AL":"São José da Laje, AL","Sao Jose da Tapera, AL":"São José da Tapera, AL","Sao Luis do Quitunde, AL":"São Luís do Quitunde, AL","Sao Miguel dos Campos, AL":"São Miguel dos Campos, AL","Sao Sebastiao, AL":"São Sebastião, AL","Santana do Ipanema, AL":"Santana do Ipanema, AL","Santana do Mundau, AL":"Santana do Mundaú, AL","Santa Luzia do Norte, AL":"Santa Luzia do Norte, AL","Teotonio Vilela, AL":"Teotônio Vilela, AL","Taquarana, AL":"Taquarana, AL",
+  "Macapa, AP":"Macapá, AP","Mazagao, AP":"Mazagão, AP","Oiapoque, AP":"Oiapoque, AP","Vitoria do Jari, AP":"Vitória do Jari, AP","Calcoene, AP":"Calçoene, AP","Amapa, AP":"Amapá, AP","Pracuuba, AP":"Pracuúba, AP",
+  "Manaus, AM":"Manaus, AM","Parintins, AM":"Parintins, AM","Itacoatiara, AM":"Itacoatiara, AM","Maues, AM":"Maués, AM","Tefe, AM":"Tefé, AM","Coari, AM":"Coari, AM","Codajas, AM":"Codajás, AM","Eirunepe, AM":"Eirunepé, AM","Humaita, AM":"Humaitá, AM","Jurua, AM":"Juruá, AM","Jutai, AM":"Jutaí, AM","Labrea, AM":"Lábrea, AM","Japura, AM":"Japurá, AM","Maraa, AM":"Maraã, AM","Tapaua, AM":"Tapauá, AM",
+  "Salvador, BA":"Salvador, BA","Feira de Santana, BA":"Feira de Santana, BA","Camacari, BA":"Camaçari, BA","Vitoria da Conquista, BA":"Vitória da Conquista, BA","Ilheus, BA":"Ilhéus, BA","Itabuna, BA":"Itabuna, BA","Jequie, BA":"Jequié, BA","Lauro de Freitas, BA":"Lauro de Freitas, BA","Eunapoles, BA":"Eunápolis, BA","Luis Eduardo Magalhaes, BA":"Luís Eduardo Magalhães, BA","Valenca, BA":"Valença, BA","Seabra, BA":"Seabra, BA","Simoes Filho, BA":"Simões Filho, BA",
+  "Fortaleza, CE":"Fortaleza, CE","Caucaia, CE":"Caucaia, CE","Maracanau, CE":"Maracanaú, CE","Juazeiro do Norte, CE":"Juazeiro do Norte, CE","Sobral, CE":"Sobral, CE","Quixada, CE":"Quixadá, CE","Crato, CE":"Crato, CE","Aquiraz, CE":"Aquiraz, CE","Itapipoca, CE":"Itapipoca, CE","Maranguape, CE":"Maranguape, CE","Iguatu, CE":"Iguatu, CE","Pacatuba, CE":"Pacatuba, CE",
+  "Brasilia, DF":"Brasília, DF",
+  "Vitoria, ES":"Vitória, ES","Sao Mateus, ES":"São Mateus, ES","Cachoeiro de Itapemirim, ES":"Cachoeiro de Itapemirim, ES",
+  "Goiania, GO":"Goiânia, GO","Aparecida de Goiania, GO":"Aparecida de Goiânia, GO","Anapolis, GO":"Anápolis, GO","Aguas Lindas de Goias, GO":"Águas Lindas de Goiás, GO","Luziania, GO":"Luziânia, GO","Catalao, GO":"Catalão, GO","Jatai, GO":"Jataí, GO","Valparaiso de Goias, GO":"Valparaíso de Goiás, GO",
+  "Sao Luis, MA":"São Luís, MA","Imperatriz, MA":"Imperatriz, MA","Caxias, MA":"Caxias, MA","Bacabal, MA":"Bacabal, MA","Codo, MA":"Codó, MA","Timon, MA":"Timon, MA","Balsas, MA":"Balsas, MA","Acailandia, MA":"Açailândia, MA","Paco do Lumiar, MA":"Paço do Lumiar, MA","Sao Jose de Ribamar, MA":"São José de Ribamar, MA",
+  "Belo Horizonte, MG":"Belo Horizonte, MG","Contagem, MG":"Contagem, MG","Betim, MG":"Betim, MG","Uberlandia, MG":"Uberlândia, MG","Uberaba, MG":"Uberaba, MG","Juiz de Fora, MG":"Juiz de Fora, MG","Montes Claros, MG":"Montes Claros, MG","Ipatinga, MG":"Ipatinga, MG","Divinopolis, MG":"Divinópolis, MG","Ribeirao das Neves, MG":"Ribeirão das Neves, MG","Nova Lima, MG":"Nova Lima, MG","Varginha, MG":"Varginha, MG","Sete Lagoas, MG":"Sete Lagoas, MG","Ibirite, MG":"Ibirité, MG","Governador Valadares, MG":"Governador Valadares, MG","Pocos de Caldas, MG":"Poços de Caldas, MG","Patos de Minas, MG":"Patos de Minas, MG","Unai, MG":"Unaí, MG","Coronel Fabriciano, MG":"Coronel Fabriciano, MG","Santa Luzia, MG":"Santa Luzia, MG",
+  "Campo Grande, MS":"Campo Grande, MS","Dourados, MS":"Dourados, MS","Tres Lagoas, MS":"Três Lagoas, MS","Corumba, MS":"Corumbá, MS","Ponta Pora, MS":"Ponta Porã, MS","Navirai, MS":"Naviraí, MS",
+  "Cuiaba, MT":"Cuiabá, MT","Varzea Grande, MT":"Várzea Grande, MT","Rondonopolis, MT":"Rondonópolis, MT","Sinop, MT":"Sinop, MT","Sorriso, MT":"Sorriso, MT","Lucas do Rio Verde, MT":"Lucas do Rio Verde, MT","Alta Floresta, MT":"Alta Floresta, MT","Tangara da Serra, MT":"Tangará da Serra, MT","Primavera do Leste, MT":"Primavera do Leste, MT","Barra do Garcas, MT":"Barra do Garças, MT","Caceres, MT":"Cáceres, MT",
+  "Belem, PA":"Belém, PA","Ananindeua, PA":"Ananindeua, PA","Santarem, PA":"Santarém, PA","Maraba, PA":"Marabá, PA","Castanhal, PA":"Castanhal, PA","Parauapebas, PA":"Parauapebas, PA","Itaituba, PA":"Itaituba, PA","Redencao, PA":"Redenção, PA","Tucurui, PA":"Tucuruí, PA","Barcarena, PA":"Barcarena, PA",
+  "Joao Pessoa, PB":"João Pessoa, PB","Campina Grande, PB":"Campina Grande, PB",
+  "Recife, PE":"Recife, PE","Jaboatao dos Guararapes, PE":"Jaboatão dos Guararapes, PE","Olinda, PE":"Olinda, PE","Caruaru, PE":"Caruaru, PE","Petrolina, PE":"Petrolina, PE","Paulista, PE":"Paulista, PE","Igarassu, PE":"Igarassu, PE","Salgueiro, PE":"Salgueiro, PE","Serra Talhada, PE":"Serra Talhada, PE",
+  "Teresina, PI":"Teresina, PI","Parnaiba, PI":"Parnaíba, PI","Picos, PI":"Picos, PI",
+  "Curitiba, PR":"Curitiba, PR","Londrina, PR":"Londrina, PR","Maringa, PR":"Maringá, PR","Ponta Grossa, PR":"Ponta Grossa, PR","Cascavel, PR":"Cascavel, PR","Sao Jose dos Pinhais, PR":"São José dos Pinhais, PR","Foz do Iguacu, PR":"Foz do Iguaçu, PR","Colombo, PR":"Colombo, PR","Guarapuava, PR":"Guarapuava, PR","Paranagua, PR":"Paranaguá, PR","Araucaria, PR":"Araucária, PR","Toledo, PR":"Toledo, PR","Almirante Tamandare, PR":"Almirante Tamandaré, PR","Apucarana, PR":"Apucarana, PR","Pinhais, PR":"Pinhais, PR","Campo Largo, PR":"Campo Largo, PR","Umuarama, PR":"Umuarama, PR","Francisco Beltrao, PR":"Francisco Beltrão, PR",
+  "Rio de Janeiro, RJ":"Rio de Janeiro, RJ","Sao Goncalo, RJ":"São Gonçalo, RJ","Duque de Caxias, RJ":"Duque de Caxias, RJ","Nova Iguacu, RJ":"Nova Iguaçu, RJ","Belford Roxo, RJ":"Belford Roxo, RJ","Niteroi, RJ":"Niterói, RJ","Sao Joao de Meriti, RJ":"São João de Meriti, RJ","Campos dos Goytacazes, RJ":"Campos dos Goytacazes, RJ","Petropolis, RJ":"Petrópolis, RJ","Volta Redonda, RJ":"Volta Redonda, RJ","Itaborai, RJ":"Itaboraí, RJ","Marica, RJ":"Maricá, RJ","Macae, RJ":"Macaé, RJ","Nova Friburgo, RJ":"Nova Friburgo, RJ","Teresopolis, RJ":"Teresópolis, RJ","Queimados, RJ":"Queimados, RJ","Tres Rios, RJ":"Três Rios, RJ","Mesquita, RJ":"Mesquita, RJ",
+  "Natal, RN":"Natal, RN","Mossoro, RN":"Mossoró, RN","Parnamirim, RN":"Parnamirim, RN","Caico, RN":"Caicó, RN","Sao Goncalo do Amarante, RN":"São Gonçalo do Amarante, RN",
+  "Porto Velho, RO":"Porto Velho, RO","Ji-Parana, RO":"Ji-Paraná, RO","Ariquemes, RO":"Ariquemes, RO","Cacoal, RO":"Cacoal, RO","Vilhena, RO":"Vilhena, RO",
+  "Boa Vista, RR":"Boa Vista, RR","Caracarai, RR":"Caracaraí, RR","Pacaraima, RR":"Pacaraima, RR","Mucajai, RR":"Mucajaí, RR",
+  "Porto Alegre, RS":"Porto Alegre, RS","Caxias do Sul, RS":"Caxias do Sul, RS","Pelotas, RS":"Pelotas, RS","Canoas, RS":"Canoas, RS","Santa Maria, RS":"Santa Maria, RS","Novo Hamburgo, RS":"Novo Hamburgo, RS","Sao Leopoldo, RS":"São Leopoldo, RS","Gravatai, RS":"Gravataí, RS","Viarao, RS":"Viamão, RS","Passo Fundo, RS":"Passo Fundo, RS","Cachoeirinha, RS":"Cachoeirinha, RS","Santa Cruz do Sul, RS":"Santa Cruz do Sul, RS","Uruguaiana, RS":"Uruguaiana, RS","Erechim, RS":"Erechim, RS","Rio Grande, RS":"Rio Grande, RS","Bento Goncalves, RS":"Bento Gonçalves, RS",
+  "Joinville, SC":"Joinville, SC","Florianopolis, SC":"Florianópolis, SC","Blumenau, SC":"Blumenau, SC","Sao Jose, SC":"São José, SC","Criciuma, SC":"Criciúma, SC","Chapeco, SC":"Chapecó, SC","Itajai, SC":"Itajaí, SC","Jaragua do Sul, SC":"Jaraguá do Sul, SC","Lages, SC":"Lages, SC","Palhoca, SC":"Palhoça, SC","Brusque, SC":"Brusque, SC","Tubarao, SC":"Tubarão, SC","Rio do Sul, SC":"Rio do Sul, SC",
+  "Aracaju, SE":"Aracaju, SE","Nossa Senhora do Socorro, SE":"Nossa Senhora do Socorro, SE","Lagarto, SE":"Lagarto, SE","Itabaiana, SE":"Itabaiana, SE","Sao Cristovao, SE":"São Cristóvão, SE",
+  "Sao Paulo, SP":"São Paulo, SP","Guarulhos, SP":"Guarulhos, SP","Campinas, SP":"Campinas, SP","Sao Bernardo do Campo, SP":"São Bernardo do Campo, SP","Santo Andre, SP":"Santo André, SP","Osasco, SP":"Osasco, SP","Ribeirao Preto, SP":"Ribeirão Preto, SP","Sao Jose dos Campos, SP":"São José dos Campos, SP","Sorocaba, SP":"Sorocaba, SP","Mogi das Cruzes, SP":"Mogi das Cruzes, SP","Santos, SP":"Santos, SP","Diadema, SP":"Diadema, SP","Jundiai, SP":"Jundiaí, SP","Carapicuiba, SP":"Carapicuíba, SP","Sao Jose do Rio Preto, SP":"São José do Rio Preto, SP","Maua, SP":"Mauá, SP","Itaquaquecetuba, SP":"Itaquaquecetuba, SP","Sao Caetano do Sul, SP":"São Caetano do Sul, SP","Franca, SP":"Franca, SP","Bauru, SP":"Bauru, SP","Guaruja, SP":"Guarujá, SP","Taubate, SP":"Taubaté, SP","Sao Vicente, SP":"São Vicente, SP","Praia Grande, SP":"Praia Grande, SP","Piracicaba, SP":"Piracicaba, SP","Limeira, SP":"Limeira, SP","Suzano, SP":"Suzano, SP","Sumare, SP":"Sumaré, SP","Marilia, SP":"Marília, SP","Americana, SP":"Americana, SP","Araraquara, SP":"Araraquara, SP","Presidente Prudente, SP":"Presidente Prudente, SP","Cotia, SP":"Cotia, SP","Barueri, SP":"Barueri, SP","Hortolandia, SP":"Hortolândia, SP","Cajamar, SP":"Cajamar, SP","Indaiatuba, SP":"Indaiatuba, SP","Jacareí, SP":"Jacareí, SP","Jacarei, SP":"Jacareí, SP","Ribeirao Pires, SP":"Ribeirão Pires, SP","Rio Claro, SP":"Rio Claro, SP","Itapecerica da Serra, SP":"Itapecerica da Serra, SP","Itapevi, SP":"Itapevi, SP","Embu das Artes, SP":"Embu das Artes, SP","Ferraz de Vasconcelos, SP":"Ferraz de Vasconcelos, SP","Franco da Rocha, SP":"Franco da Rocha, SP","Araras, SP":"Araras, SP","Taboao da Serra, SP":"Taboão da Serra, SP",
+  "Palmas, TO":"Palmas, TO","Araguaina, TO":"Araguaína, TO","Gurupi, TO":"Gurupi, TO","Porto Nacional, TO":"Porto Nacional, TO"
+};
+
+function filtrarCidades(q){
+  const dd = document.getElementById('cidades-dropdown');
+  if(!q || q.length < 2){dd.style.display='none';return;}
+  const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const qn = norm(q);
+  const matches = CIDADES_BR.filter(c => norm(c).includes(qn)).slice(0,8);
+  if(!matches.length){dd.style.display='none';return;}
+  dd.innerHTML = matches.map(c => {
+    const display = CIDADES_DISPLAY[c] || c;
+    return '<div onclick="selecionarCidade(\'' + display + '\')" style="padding:8px 13px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--bg);color:var(--tx)" onmouseover="this.style.background=\'#f0f5ff\'" onmouseout="this.style.background=\'\'">' + display + '</div>';
+  }).join('');
+  dd.style.display='block';
+}
+function selecionarCidade(c){
+  document.getElementById('cidade').value = c;
+  document.getElementById('cidades-dropdown').style.display='none';
+}
+function fecharCidades(){
+  const dd = document.getElementById('cidades-dropdown');
+  if(dd) dd.style.display='none';
+}
+
+// ══════════════════════════════════════════
+// MÁSCARA DE DATA mm/aaaa
+// ══════════════════════════════════════════
+function maskMesAno(el){
+  let v = el.value.replace(/\D/g,'');
+  if(v.length > 2) v = v.slice(0,2)+'/'+v.slice(2,6);
+  el.value = v;
+}
+function maskMesAnoFim(el){
+  const raw = el.value;
+  if(raw.toLowerCase().startsWith('at')){el.value='Atual';return;}
+  maskMesAno(el);
+}
+
+function telMask(){
+  const el = document.getElementById('telefone');
+  el.addEventListener('input',function(){
+    let v = this.value.replace(/\D/g,'');
+    v = v.replace(/^(\d{2})(\d)/,'($1) $2');
+    v = v.replace(/(\d{5})(\d{1,4})$/,'$1-$2');
+    this.value = v;
+  });
+}
+
+// ══════════════════════════════════════════
+// NAVEGAÇÃO ENTRE STEPS
+// ══════════════════════════════════════════
+function irStep(n){
+  if(n > STEP && !validarStep(STEP)) return;
+  document.getElementById('step-'+STEP).classList.remove('active');
+  STEP = n;
+  document.getElementById('step-'+STEP).classList.add('active');
+  updateIndicador();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function updateIndicador(){
+  const pcts = {1:20,2:45,3:68,4:88,5:100};
+  document.getElementById('progress-fill').style.width = (pcts[STEP]||20)+'%';
+  for(let i=1;i<=4;i++){
+    const c = document.getElementById('si-'+i);
+    const l = document.getElementById('sl-'+i);
+    c.className = 'si-circle';
+    l.className = 'si-label';
+    if(i < STEP){c.classList.add('done');l.classList.add('done');c.textContent='✓';}
+    else if(i===STEP){c.classList.add('active');l.classList.add('active');}
+    if(i<=3){
+      const ln = document.getElementById('sl-line-'+i);
+      if(ln) ln.className = 'si-line'+(i<STEP?' done':'');
+    }
+  }
+}
+
+// ══════════════════════════════════════════
+// VALIDAÇÃO
+// ══════════════════════════════════════════
+function validarStep(s){
+  if(s===1){
+    if(!v('nome')){notify('Informe seu nome completo','e');return false;}
+    if(!v('cidade')){notify('Informe sua cidade','e');return false;}
+    if(!v('telefone')){notify('Informe seu telefone','e');return false;}
+    if(!v('email')){notify('Informe seu e-mail','e');return false;}
+    if(!v('cargo_objetivo')){notify('Informe o cargo/área que busca','e');return false;}
+    if(!nivel_sel){notify('Selecione seu nível profissional','e');return false;}
+    if(!document.getElementById('aceite-lgpd').checked){notify('Você precisa aceitar os termos da LGPD para continuar','e');return false;}
+  }
+  return true;
+}
+function v(id){return document.getElementById(id)?.value?.trim();}
+
+// ══════════════════════════════════════════
+// NÍVEL PROFISSIONAL
+// ══════════════════════════════════════════
+const DICAS_NIVEL = {
+  jovem: 'Para <strong>Jovem Aprendiz</strong>: destaque sua disposição para aprender, habilidades escolares, cursos técnicos e trabalho voluntário. Não precisa de experiência profissional — foque no potencial.',
+  estagiario: 'Para <strong>Estagiário</strong>: evidencie projetos acadêmicos, pesquisas, trabalhos de conclusão e conhecimentos teóricos aplicados. Habilidades em ferramentas da sua área valem muito.',
+  junior: 'Para <strong>Júnior/Assistente</strong>: mostre as tarefas que realizou com resultados, mesmo que pequenos. Cursos recentes e capacidade de aprendizado rápido são diferenciais importantes.',
+  pleno: 'Para <strong>Pleno/Analista</strong>: foque em resultados mensuráveis, projetos que liderou ou contribuiu com impacto real. Mostre evolução e autonomia crescente na sua trajetória.',
+  senior: 'Para <strong>Sênior/Especialista</strong>: destaque transformações que promoveu, benchmarks que atingiu, conhecimento técnico profundo e capacidade de resolver problemas complexos.',
+  lideranca: 'Para <strong>Liderança/Gestão</strong>: evidencie tamanho de equipes gerenciadas, resultados de negócio (faturamento, redução de custos), mudanças culturais e desenvolvimento de pessoas.'
+};
+
+function selNivel(btn){
+  document.querySelectorAll('.nivel-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  nivel_sel = btn.dataset.nivel;
+  const dica = document.getElementById('dica-nivel');
+  document.getElementById('dica-nivel-txt').innerHTML = DICAS_NIVEL[nivel_sel]||'';
+  dica.style.display = 'block';
+}
+
+// ══════════════════════════════════════════
+// EXPERIÊNCIAS
+// ══════════════════════════════════════════
+function addExp(){
+  exps_count++;
+  const c = document.getElementById('exps-container');
+  const div = document.createElement('div');
+  div.className = 'exp-item';
+  div.id = 'exp-'+exps_count;
+  div.innerHTML = `
+    <button class="exp-remove" onclick="removeExp('exp-${exps_count}')">✕</button>
+    <div class="fg2">
+      <div class="f"><label>Empresa</label><input type="text" class="exp-empresa" placeholder="Nome da empresa"></div>
+      <div class="f"><label>Cargo</label><input type="text" class="exp-cargo" placeholder="Seu cargo"></div>
+    </div>
+    <div class="fg3">
+      <div class="f"><label>Início</label><input type="text" class="exp-inicio exp-data" placeholder="mm/aaaa" maxlength="7" oninput="maskMesAno(this)"></div>
+      <div class="f"><label>Término</label><input type="text" class="exp-fim exp-data" placeholder="mm/aaaa ou Atual" maxlength="7" oninput="maskMesAnoFim(this)"></div>
+      <div class="f"><label>Área</label>
+        <select class="exp-area">
+          <option value="">Selecione</option>
+          <option>Administrativo</option><option>Comercial / Vendas</option>
+          <option>RH / Departamento Pessoal</option><option>Financeiro / Contábil</option>
+          <option>Logística / Operações</option><option>TI / Tecnologia</option>
+          <option>Marketing / Comunicação</option><option>Produção / Manufatura</option>
+          <option>Saúde</option><option>Educação</option><option>Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="f">
+      <label>Principais conquistas e responsabilidades</label>
+      <textarea class="exp-desc" rows="3" placeholder="Use verbos de ação e resultados: &#10;- Implementei processo de controle de estoque reduzindo perdas em 18%&#10;- Atendi média de 80 clientes/dia mantendo 95% de satisfação&#10;- Participei do projeto de implantação do ERP (SAP B1)"></textarea>
+    </div>`;
+  c.appendChild(div);
+}
+function removeExp(id){
+  const el = document.getElementById(id);
+  if(el) el.remove();
+}
+
+// ══════════════════════════════════════════
+// FORMAÇÃO
+// ══════════════════════════════════════════
+function addFormacao_check(){
+  // já tem 1 por padrão no HTML
+}
+function addFormacao(){
+  const c = document.getElementById('formacao-container');
+  const div = document.createElement('div');
+  div.className = 'exp-item form-item';
+  div.innerHTML = `
+    <button class="exp-remove" onclick="this.parentElement.remove()">✕</button>
+    <div class="fg2">
+      <div class="f"><label>Curso</label><input type="text" class="form-curso" placeholder="Ex: Técnico em Administração"></div>
+      <div class="f"><label>Instituição</label><input type="text" class="form-inst" placeholder="Ex: SENAI"></div>
+    </div>
+    <div class="fg2">
+      <div class="f"><label>Situação</label>
+        <select class="form-status">
+          <option>Concluído</option><option>Em andamento</option><option>Trancado</option>
+        </select>
+      </div>
+      <div class="f"><label>Ano</label><input type="text" class="form-ano" placeholder="2024"></div>
+    </div>`;
+  c.appendChild(div);
+}
+
+// ══════════════════════════════════════════
+// IDIOMAS
+// ══════════════════════════════════════════
+function addIdioma(){
+  const c = document.getElementById('idiomas-container');
+  const div = document.createElement('div');
+  div.style.position = 'relative';
+  div.innerHTML = `
+    <button class="exp-remove" style="position:absolute;top:0;right:0" onclick="this.parentElement.remove()">✕</button>
+    <div class="fg2">
+      <div class="f"><label>Idioma</label><input type="text" class="idioma-nome" placeholder="Ex: Espanhol"></div>
+      <div class="f"><label>Nível</label>
+        <select class="idioma-nivel">
+          <option value="">Selecione</option>
+          <option>Básico</option><option>Intermediário</option>
+          <option>Avançado</option><option>Fluente</option><option>Nativo</option>
+        </select>
+      </div>
+    </div>`;
+  c.appendChild(div);
+}
+
+// ══════════════════════════════════════════
+// UPLOAD
+// ══════════════════════════════════════════
+function handleUpload(input){
+  const f = input.files[0];
+  if(!f) return;
+  if(f.size > 5*1024*1024){notify('Arquivo muito grande. Máx. 5MB','e');return;}
+  const el = document.getElementById('file-name');
+  el.textContent = '✅ '+f.name+' anexado com sucesso!';
+  el.style.display = 'block';
+}
+
+// ══════════════════════════════════════════
+// COLETA DE DADOS
+// ══════════════════════════════════════════
+function coletarDados(){
+  const exps = [];
+  document.querySelectorAll('.exp-item').forEach(el=>{
+    const emp = el.querySelector('.exp-empresa')?.value?.trim();
+    const cargo = el.querySelector('.exp-cargo')?.value?.trim();
+    const desc = el.querySelector('.exp-desc')?.value?.trim();
+    if(emp||cargo) exps.push({
+      empresa: emp||'',
+      cargo: cargo||'',
+      inicio: el.querySelector('.exp-inicio')?.value||'',
+      fim: el.querySelector('.exp-fim')?.value||'Atual',
+      desc: desc||''
+    });
+  });
+
+  const formacoes = [];
+  document.querySelectorAll('.form-item').forEach(el=>{
+    const curso = el.querySelector('.form-curso')?.value?.trim();
+    if(curso) formacoes.push({
+      curso,
+      inst: el.querySelector('.form-inst')?.value||'',
+      status: el.querySelector('.form-status')?.value||'Concluído',
+      ano: el.querySelector('.form-ano')?.value||''
+    });
+  });
+
+  const idiomas = [];
+  document.querySelectorAll('.idioma-nome').forEach((el,i)=>{
+    const nome = el.value?.trim();
+    const nivel = document.querySelectorAll('.idioma-nivel')[i]?.value||'';
+    if(nome && nivel) idiomas.push(nome+' — '+nivel);
+  });
+
+  return {
+    nome: v('nome')||'',
+    cidade: v('cidade')||'',
+    tel: v('telefone')||'',
+    email: v('email')||'',
+    linkedin: v('linkedin')||'',
+    cargo_objetivo: v('cargo_objetivo')||'',
+    objetivo_txt: v('objetivo_txt')||'',
+    nivel: nivel_sel,
+    habilidades: v('habilidades')||'',
+    idiomas,
+    formacoes,
+    exps,
+    cursos: v('cursos')||'',
+    extras: v('extras')||'',
+    pretensao: v('pretensao')||'',
+    banco: document.getElementById('banco-talentos').checked
+  };
+}
+
+// ══════════════════════════════════════════
+// GERAR CURRÍCULO COM IA
+// ══════════════════════════════════════════
+async function gerarCurriculo(){
+  if(!validarStep(3)) return;
+  irStep(4);
+  const dados = coletarDados();
+
+  document.getElementById('ia-loading-box').style.display = 'block';
+  document.getElementById('preview-card').style.display = 'none';
+
+  const msgs = ['Analisando seu perfil...','Formatando experiências...','Otimizando para sistemas ATS...','Finalizando o currículo...'];
+  let mi = 0;
+  const intv = setInterval(()=>{
+    document.getElementById('ia-msg').textContent = msgs[mi%msgs.length]; mi++;
+  },1400);
+
+  const nivelInstrucoes = {
+    jovem: 'Este é um candidato de Jovem Aprendiz em busca do primeiro emprego. Foque em potencial, disposição para aprender, cursos técnicos e atividades escolares. Se não houver experiência, crie a seção "Competências" ao invés de Experiência Profissional.',
+    estagiario: 'Este é um estagiário. Destaque projetos acadêmicos, trabalhos de conclusão, pesquisas, conhecimentos teóricos e habilidades com ferramentas da área.',
+    junior: 'Este é um profissional Júnior/Assistente. Valorize cada experiência, mesmo breve, destacando aprendizados e pequenas conquistas com métricas.',
+    pleno: 'Este é um profissional Pleno/Analista. Destaque evolução de carreira, resultados mensuráveis, projetos e crescente autonomia.',
+    senior: 'Este é um profissional Sênior/Especialista. Enfatize transformações promovidas, benchmarks atingidos e expertise técnica profunda.',
+    lideranca: 'Este é um profissional de Liderança/Gestão. Foque em resultados de negócio, dimensão das equipes gerenciadas, mudanças organizacionais e desenvolvimento de pessoas.'
+  };
+
+  const prompt = `Você é um especialista em currículo profissional focado em compatibilidade com sistemas ATS.
+
+${nivelInstrucoes[dados.nivel]||''}
+
+Com base nos dados abaixo, escreva o conteúdo completo do currículo em formato JSON estruturado. Não invente informações — use apenas o que foi fornecido. Melhore a redação das descrições com verbos de ação e métricas quando possível.
+
+DADOS DO CANDIDATO:
+Nome: ${dados.nome}
+Cidade: ${dados.cidade}
+Telefone: ${dados.tel}
+E-mail: ${dados.email}
+LinkedIn: ${dados.linkedin}
+Cargo objetivo: ${dados.cargo_objetivo}
+Objetivo descrito: ${dados.objetivo_txt}
+Nível: ${dados.nivel}
+Habilidades técnicas: ${dados.habilidades}
+Idiomas: ${dados.idiomas.join(', ')}
+Cursos complementares: ${dados.cursos}
+Extras/Voluntariado: ${dados.extras}
+Pretensão salarial: ${dados.pretensao}
+
+EXPERIÊNCIAS:
+${dados.exps.map((e,i)=>`${i+1}. ${e.empresa} | ${e.cargo} | ${e.inicio} a ${e.fim}\n${e.desc}`).join('\n\n')}
+
+FORMAÇÃO:
+${dados.formacoes.map(f=>`${f.curso} | ${f.inst} | ${f.status} ${f.ano}`).join('\n')}
+
+INSTRUÇÕES:
+1. Escreva um resumo profissional de 3-4 linhas impactante e específico
+2. Para cada experiência, transforme as descrições em bullets com verbos de ação (máx. 4 bullets por experiência)
+3. Seja conciso — o currículo deve ter no máximo 2 páginas
+4. Não use adjetivos genéricos como "proativo", "dinâmico", "comunicativo"
+5. NÃO inclua foto, estado civil, data de nascimento, endereço completo
+
+Responda APENAS com JSON válido neste formato exato:
+{
+  "resumo": "texto do resumo profissional",
+  "objetivo_formatado": "texto do objetivo",
+  "experiencias": [
+    {"empresa":"","cargo":"","periodo":"","bullets":["","",""]}
+  ],
+  "formacoes": [
+    {"curso":"","instituicao":"","ano":"","status":""}
+  ],
+  "habilidades": ["hab1","hab2"],
+  "idiomas": ["Inglês — Avançado"],
+  "cursos": ["curso1 · instituição · ano"],
+  "extras": "texto extras se houver"
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1800,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data = await resp.json();
+    clearInterval(intv);
+    const txt = data.content?.find(b=>b.type==='text')?.text||'';
+    const clean = txt.replace(/```json|```/g,'').trim();
+    const cv = JSON.parse(clean);
+    curriculo_gerado = cv;
+    renderPreview(cv, dados);
+    document.getElementById('ia-loading-box').style.display = 'none';
+    document.getElementById('preview-card').style.display = 'block';
+  } catch(err) {
+    clearInterval(intv);
+    // fallback sem IA
+    const cv = buildCVSemIA(dados);
+    curriculo_gerado = cv;
+    renderPreview(cv, dados);
+    document.getElementById('ia-loading-box').style.display = 'none';
+    document.getElementById('preview-card').style.display = 'block';
+    notify('⚠️ Currículo gerado localmente (sem otimização IA)','e');
+  }
+}
+
+function buildCVSemIA(d){
+  return {
+    resumo: d.objetivo_txt || 'Profissional com experiência em '+d.cargo_objetivo+', buscando contribuir com suas competências e continuar crescendo na área.',
+    objetivo_formatado: d.objetivo_txt || 'Atuar como '+d.cargo_objetivo,
+    experiencias: d.exps.map(e=>({
+      empresa: e.empresa,
+      cargo: e.cargo,
+      periodo: (e.inicio||'')+(e.fim?' a '+e.fim:''),
+      bullets: e.desc ? e.desc.split('\n').filter(x=>x.trim()) : []
+    })),
+    formacoes: d.formacoes.map(f=>({
+      curso: f.curso,
+      instituicao: f.inst,
+      ano: f.ano,
+      status: f.status
+    })),
+    habilidades: d.habilidades ? d.habilidades.split(/[,;\n]/).map(h=>h.trim()).filter(Boolean) : [],
+    idiomas: d.idiomas,
+    cursos: d.cursos ? d.cursos.split('\n').filter(x=>x.trim()) : [],
+    extras: d.extras||''
+  };
+}
+
+// ══════════════════════════════════════════
+// RENDER PREVIEW
+// ══════════════════════════════════════════
+function renderPreview(cv, dados){
+  const d = dados || coletarDados();
+  let html = '';
+
+  // CABEÇALHO
+  html += `<h1>${d.nome}</h1>`;
+  const contatos = [d.cidade, d.tel, d.email, d.linkedin].filter(Boolean).join(' · ');
+  html += `<div class="cv-contact">${contatos}</div>`;
+
+  // OBJETIVO
+  if(cv.objetivo_formatado){
+    html += `<div class="cv-objetivo">${cv.objetivo_formatado}</div>`;
+  }
+
+  // RESUMO
+  if(cv.resumo){
+    html += `<div class="cv-section"><h2>Resumo Profissional</h2><p class="cv-resumo">${cv.resumo}</p></div>`;
+  }
+
+  // EXPERIÊNCIA
+  if(cv.experiencias?.length){
+    html += `<div class="cv-section"><h2>Experiência Profissional</h2>`;
+    cv.experiencias.forEach(e=>{
+      if(!e.empresa && !e.cargo) return;
+      html += `<div class="cv-exp-item">
+        <div class="cv-exp-header">
+          <span class="cv-exp-empresa">${e.empresa||''}</span>
+          <span class="cv-exp-data">${e.periodo||''}</span>
+        </div>
+        <div class="cv-exp-cargo">${e.cargo||''}</div>`;
+      if(e.bullets?.length){
+        html += `<ul class="cv-exp-desc">`;
+        e.bullets.forEach(b=>{ if(b) html += `<li>${b.replace(/^[-•]\s*/,'')}</li>`; });
+        html += `</ul>`;
+      }
+      html += `</div>`;
+    });
+    html += `</div>`;
+  }
+
+  // FORMAÇÃO
+  if(cv.formacoes?.length){
+    html += `<div class="cv-section"><h2>Formação Acadêmica</h2>`;
+    cv.formacoes.forEach(f=>{
+      if(!f.curso) return;
+      html += `<div class="cv-exp-item">
+        <div class="cv-exp-header">
+          <span class="cv-exp-empresa">${f.curso}</span>
+          <span class="cv-exp-data">${f.ano||''} ${f.status&&f.status!='Concluído'?'('+f.status+')':''}</span>
+        </div>
+        ${f.instituicao?`<div class="cv-exp-cargo">${f.instituicao}</div>`:''}
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // HABILIDADES + IDIOMAS (2 colunas)
+  const habTxt = cv.habilidades?.filter(Boolean).join(' · ');
+  const idTxt = cv.idiomas?.filter(Boolean).join(' · ');
+
+  if(habTxt || idTxt){
+    html += `<div class="cv-two-col">`;
+    if(habTxt) html += `<div class="cv-section"><h2>Habilidades Técnicas</h2><p class="cv-hab-item">${habTxt}</p></div>`;
+    if(idTxt)  html += `<div class="cv-section"><h2>Idiomas</h2><p class="cv-hab-item">${idTxt}</p></div>`;
+    html += `</div>`;
+  }
+
+  // CURSOS
+  if(cv.cursos?.length){
+    html += `<div class="cv-section"><h2>Cursos Complementares</h2>`;
+    cv.cursos.forEach(c=>{ if(c) html += `<div class="cv-hab-item">${c}</div>`; });
+    html += `</div>`;
+  }
+
+  // EXTRAS
+  if(cv.extras){
+    html += `<div class="cv-section"><h2>Informações Adicionais</h2><p class="cv-resumo">${cv.extras}</p></div>`;
+  }
+
+  document.getElementById('curriculo-preview').innerHTML = html;
+}
+
+// ══════════════════════════════════════════
+// BAIXAR PDF
+// ══════════════════════════════════════════
+function baixarPDF(){
+  const el = document.getElementById('curriculo-preview');
+  if(!el || !el.innerHTML.trim()){notify('Gere o currículo primeiro','e');return;}
+  const nome = v('nome')||'curriculo';
+  const nomeFile = nome.toLowerCase().replace(/\s+/g,'-').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const w = window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head>
+    <meta charset="UTF-8">
+    <title>Currículo — ${nome}</title>
+    <style>
+      body{font-family:'Times New Roman',serif;font-size:11pt;color:#000;margin:20mm 20mm 20mm 20mm;line-height:1.5}
+      h1{font-family:Arial,sans-serif;font-size:16pt;font-weight:bold;margin-bottom:2px}
+      .cv-contact{font-size:9pt;color:#333;margin-bottom:12px;padding-bottom:8px;border-bottom:2pt solid #1A4B8F}
+      .cv-section{margin-bottom:14px}
+      .cv-section h2{font-family:Arial,sans-serif;font-size:10pt;font-weight:bold;text-transform:uppercase;letter-spacing:.06em;color:#1A4B8F;border-bottom:1px solid #1A4B8F;padding-bottom:2px;margin-bottom:6px}
+      .cv-objetivo{font-size:10pt;color:#333;font-style:italic;margin-bottom:12px;padding:6px 10px;background:#f8f9ff;border-left:3px solid #1A4B8F}
+      .cv-resumo{font-size:10pt;line-height:1.6}
+      .cv-exp-item{margin-bottom:10px}
+      .cv-exp-header{display:flex;justify-content:space-between}
+      .cv-exp-empresa{font-family:Arial,sans-serif;font-size:10pt;font-weight:bold}
+      .cv-exp-data{font-size:9pt;color:#555}
+      .cv-exp-cargo{font-size:10pt;font-style:italic;color:#333;margin-bottom:3px}
+      .cv-exp-desc{font-size:9.5pt;padding-left:14px;margin:3px 0}
+      .cv-exp-desc li{margin-bottom:2px}
+      .cv-two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+      .cv-hab-item{font-size:9.5pt;margin-bottom:2px}
+      @page{margin:18mm 20mm}
+      @media print{body{margin:0}}
+    </style>
+  </head><body>${el.innerHTML}</body></html>`);
+  w.document.close();
+  setTimeout(()=>w.print(),600);
+}
+
+// ══════════════════════════════════════════
+// EDITAR
+// ══════════════════════════════════════════
+function editarCurriculo(){
+  irStep(3);
+}
+
+// ══════════════════════════════════════════
+// FINALIZAR CADASTRO
+// ══════════════════════════════════════════
+function finalizarCadastro(){
+  const d = coletarDados();
+  // Aqui você pode integrar com Supabase / API do CRM
+  // Por ora, salva localmente e mostra sucesso
+  const reg = {
+    id: 'pub_'+Date.now(),
+    name: d.nome,
+    email: d.email,
+    phone: d.tel,
+    cidade: d.cidade,
+    cargo_objetivo: d.cargo_objetivo,
+    nivel: d.nivel,
+    banco_talentos: d.banco,
+    source: 'disc-livre',
+    created: new Date().toISOString(),
+    curriculo: curriculo_gerado
+  };
+  try{
+    const arr = JSON.parse(localStorage.getItem('iv_candidatos_publicos')||'[]');
+    arr.push(reg);
+    localStorage.setItem('iv_candidatos_publicos', JSON.stringify(arr));
+  }catch(e){}
+
+  irStep(5);
+  const msg = d.banco
+    ? `Seu currículo foi gerado e você foi adicionado ao Banco de Talentos IntegraVagas. Entraremos em contato quando surgir uma oportunidade alinhada com seu perfil!`
+    : `Seu currículo foi gerado com sucesso! Baixe o PDF e comece a se candidatar às vagas.`;
+  document.getElementById('success-msg').textContent = msg;
+}
+
+// ══════════════════════════════════════════
+// NOTIFY
+// ══════════════════════════════════════════
+function notify(msg,type='s'){
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.style.background = type==='e'?'#fee2e2':'#dcfce7';
+  el.style.color = type==='e'?'#dc2626':'#166534';
+  el.style.display = 'block';
+  clearTimeout(window._nt);
+  window._nt = setTimeout(()=>el.style.display='none', 3500);
+}
+</script>
+</body>
+</html>
